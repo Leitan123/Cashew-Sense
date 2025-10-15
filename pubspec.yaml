@@ -25,3 +25,8 @@ flutter:
 
   assets:
     - assets/cashew_classifier.tflite
+    - assets/logo.png
+    - assets/cashew_leaf.png
+    - assets/app_logo.png
+    - assets/main_slide.jpg
+    - assets/leaf_banner.jpg
