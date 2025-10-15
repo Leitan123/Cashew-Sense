@@ -114,13 +114,13 @@ class _LeafDetectorState extends State<LeafDetector> {
   }
 }
 */
-
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
+import '/widgets/common_widgets.dart'; // import your reusable widgets
 
 class LeafDetector extends StatefulWidget {
   const LeafDetector({super.key});
@@ -135,6 +135,7 @@ class _LeafDetectorState extends State<LeafDetector> {
   String _result = '';
   final List<String> classNames = ['Anthracnose', 'Healthy'];
   final List<File> _recentScans = [];
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -165,7 +166,7 @@ class _LeafDetectorState extends State<LeafDetector> {
         _result = '';
       });
       _runModel(File(pickedFile.path));
-      _recentScans.insert(0, File(pickedFile.path)); // add to recent scans
+      _recentScans.insert(0, File(pickedFile.path));
     }
   }
 
@@ -204,35 +205,21 @@ class _LeafDetectorState extends State<LeafDetector> {
     });
   }
 
+  void _onNavTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    // Navigation handling can be added later
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5DC),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2E3A20),
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/app_logo.png'),
-        ),
-        title: const Text(
-          'CashewSense',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
+      appBar: buildCashewAppBar(title: 'CashewSense'),
+      bottomNavigationBar: buildCashewBottomNav(
+        currentIndex: _selectedIndex,
+        onTap: _onNavTapped,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -242,7 +229,6 @@ class _LeafDetectorState extends State<LeafDetector> {
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
               children: [
-                // Banner
                 Container(
                   margin: const EdgeInsets.all(16),
                   height: 180,
@@ -284,7 +270,6 @@ class _LeafDetectorState extends State<LeafDetector> {
                     ),
                   ),
                 ),
-                // Camera Button Positioned to Overlap
                 Positioned(
                   bottom: -30,
                   child: GestureDetector(
@@ -302,11 +287,10 @@ class _LeafDetectorState extends State<LeafDetector> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.camera_alt, color: Colors.white, size: 32),
-                        ],
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 32,
                       ),
                     ),
                   ),
@@ -315,7 +299,6 @@ class _LeafDetectorState extends State<LeafDetector> {
             ),
             const SizedBox(height: 40),
 
-            // Take Photo Text
             const Text(
               'Take Photo',
               style: TextStyle(
@@ -326,7 +309,6 @@ class _LeafDetectorState extends State<LeafDetector> {
             ),
             const SizedBox(height: 20),
 
-            // Display selected image
             if (_image != null)
               Column(
                 children: [
@@ -350,7 +332,6 @@ class _LeafDetectorState extends State<LeafDetector> {
 
             const SizedBox(height: 30),
 
-            // Recent Scans Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Align(
