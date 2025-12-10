@@ -1,1 +1,2 @@
-ON going flutter project for leaf desease detection 
+On going flutter project for leaf desease detection 
+
