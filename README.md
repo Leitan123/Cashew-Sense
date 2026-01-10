@@ -86,6 +86,7 @@ The system aims to reduce a 30-40% annual yield loss caused by undetected pests/
 **Development Workspace/IDE**
 - PyCharm IDE
 - Google Colab
+- Robo Flow :- Dataset labeling 
 
 **Mobile App / Frontend** 
 - Flutter / React Native
@@ -96,17 +97,6 @@ The system aims to reduce a 30-40% annual yield loss caused by undetected pests/
 **Database/Cloud**
 - Firebase (Real-time DB & Auth)
 - Google Cloud Platform (Model Hosting)
-
-
-The system follows a centralized cloud-processing flow:
-
-Data Acquisition: Images/Data captured via smartphone camera/sensors.
-
-Preprocessing: Image resizing, noise reduction, and color normalization.
-
-Inference: AI models hosted on the cloud process the data.
-
-Actionable Insight: Results (Fertilizer dosage, Disease name, Pest alert, Nut grade) sent back to the farmer's mobile UI.
 
 ---
 
@@ -119,5 +109,6 @@ Actionable Insight: Results (Fertilizer dosage, Disease name, Pest alert, Nut gr
 
 ## **Research Content**
 The Integrated Smart System for Cashew Cultivation (Project ID: 25-26J-175) is a SLIIT research initiative designed to modernize cashew farming using AI, Machine Learning, and Computer Vision. This end-to-end solution addresses critical gaps in traditional agriculture by providing real-time, data-driven insights through four specialized modules. Mithushh P developed the Smart Soil Health Analysis system to estimate nitrogen and moisture levels via smartphone imagery, offering tailored fertilizer recommendations. Thimothy K L engineered the Leaf Disease Detection AI Model, utilizing a two-stage CNN for mobile-based diagnosis of foliar diseases like Anthracnose. Usman M.H created the Agri Doc Pest Identification System, which employs YOLOv8 and Grad-CAM to detect minute pests such as the Tea Mosquito Bug. Finally, Sanoch M developed the Automated Nut Grading System, which uses vision-based density estimation to classify nut quality objectively. Built with a tech stack featuring Python, TensorFlow, PyTorch, and OpenCV, the system promotes sustainable, high-yield agriculture by solving complex technical hurdles like small-object detection and sensor-free soil diagnostics.
+
 
 
