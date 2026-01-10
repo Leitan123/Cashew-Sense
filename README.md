@@ -1,40 +1,42 @@
-Agri Doc: An Integrated Smart System for Cashew Cultivation
+# **An Integrated Smart System for Cashew Cultivation**
 Project ID: 25-26J-175
 
-Research Area: Smart Agriculture / Precision Farming
+Research Area: Smart Agriculture
 
 Location: Sri Lanka (Focused on North Western Province)
 
-📌 Project Overview
-Agri Doc is a holistic AI-driven mobile ecosystem designed to revitalize the cashew industry in Sri Lanka. By integrating soil health analysis, plant protection (pest and disease detection), and automated post-harvest grading, the system empowers farmers to move from traditional "guesswork" to data-driven precision agriculture.
-
+### 📌 Project Overview
+Our system presents an end-to-end smart solution designed to modernize cashew farming by addressing key challenges in soil management, disease control, pest identification, and post-harvest quality grading. The system leverages Artificial Intelligence (AI), Machine Learning (ML), and Computer Vision to empower farmers with real-time, data-driven insights, reducing dependency on manual labor and costly laboratory testing.
 The system aims to reduce a 30-40% annual yield loss caused by undetected pests/diseases and increase market profitability through standardized nut grading.
 
-🚀 Key Components
-1. Smart Soil Health Analysis & Decision Support
-Lead: Mithushh P (IT22180902)
+### 🚀 Key Components
+#### 1. Smart Soil Health Analysis & Decision Support : Mithushh P (IT22180902)
 
-Focus: Predicts Nitrogen (N) levels by analyzing soil color, texture, and moisture.
+**Scope**
+- Predicts Soil health by analyzing NPK levels(Nitrogen,Phosporus,Pottasium),temperature and moisture using IOT device.
+- Analyse the plant growth using images and suggesting the fertilizer levels.
 
-Functionality: Replaces expensive lab tests with on-site mobile analysis and provides specific fertilizer recommendations and varietal matching for optimized planting.
+**Functionality**
+- Replaces expensive lab tests with on-site mobile analysis and provides specific fertilizer recommendations and varietal matching for optimized planting.
 
-2. Automated Grading System for Cashew Nuts
-Lead: Sanoch M (IT22159694)
+#### 2. Automated Grading System for Cashew Nuts : Sanoch M (IT22159694)
 
-Focus: Computer-vision-based classification of harvested nuts.
+**Scope**
+- Computer-vision-based classification of harvested nuts.
 
-Functionality: Uses CNNs to grade nuts into international categories (e.g., W180, W210) based on size, shape, and surface health, ensuring fair market value and export readiness.
+**Functionality**
+- Uses CNNs to grade nuts into A,B,C based on international categories (e.g., W180, W210), physical mesurements(length,width,density,weight) and ensuring fair market value and export readiness.
 
-3. Cashew Leaf Disease Detection AI Model
-Lead: Thimothy K L (IT22206428)
+#### 3. Cashew Leaf Disease Detection AI Model : Thimothy K L (IT22206428)
 
-Focus: Early identification of fungal and bacterial pathogens.
+**Scope**
+- Early identification of diseases on cashew plants.
 
-Functionality: Detects diseases such as Anthracnose and Red Rust using a two-stage CNN classifier optimized for low-resource mobile devices.
+**Functionality**
+- Two-stage CNN architecture: Binary classification (healthy vs. diseased) followed by multi-class classification.
+- Identifies specific diseases such as Anthracnose, Leaf Miner, Red Rust, and Leaf Spot.
 
-4. Integrated Pest Identification System
-Lead: Usman M.H (IT22351104)
-# Cashew Pest Detection System 🌱🐛
+#### 4. Cashew Pest Identification System 🌱🐛 : Usman M.H (IT22351104)
 
 An end-to-end **AI-powered pest detection system for cashew plants** using the **YOLOv8 deep learning model**, deployed as a **REST API** with **mobile and web interfaces** to support real-time, eco-friendly pest management.
 
@@ -161,4 +163,5 @@ Preprocessing: Image resizing, noise reduction, and color normalization.
 Inference: AI models hosted on the cloud process the data.
 
 Actionable Insight: Results (Fertilizer dosage, Disease name, Pest alert, Nut grade) sent back to the farmer's mobile UI.
+
 
