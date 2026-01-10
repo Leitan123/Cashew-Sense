@@ -9,6 +9,16 @@ Location: Sri Lanka (Focused on North Western Province)
 Our system presents an end-to-end smart solution designed to modernize cashew farming by addressing key challenges in soil management, disease control, pest identification, and post-harvest quality grading. The system leverages Artificial Intelligence (AI), Machine Learning (ML), and Computer Vision to empower farmers with real-time, data-driven insights, reducing dependency on manual labor and costly laboratory testing.
 The system aims to reduce a 30-40% annual yield loss caused by undetected pests/diseases and increase market profitability through standardized nut grading.
 
+## **System Objetives**
+- Optimize Soil Fertility:- To provide real-time NPK and moisture monitoring via IoT sensors for precise fertilizer recommendations.
+- Automate Disease Management:- To use CNN-based image recognition for early identification of the top 3 cashew diseases and provide instant remedies.
+- Enhance Pest Control:- To implement YOLOv8 object detection for accurate pest identification and targeted control strategies.
+- Standardize Nut Quality:- To objectively grade cashew nuts (Grade A/B/C) using computer vision (YOLOv8n) and physical parameters like density and weight.
+- Rural area usage through the offline system design.
+- Centralize Farm Operations:- To integrate hardware (ESP32) and complex AI models into a single, user-friendly Flutter mobile application via a Flask API.
+- Increase Productivity:- To empower farmers with data-driven insights that reduce crop loss and maximize harvest market value.
+
+
 ## 🏗 **System Architecture**
 <img width="1336" height="1024" alt="image" src="https://github.com/user-attachments/assets/b99bbf46-3258-4ef8-bfa8-64208b057657" />
 
@@ -109,3 +119,4 @@ Actionable Insight: Results (Fertilizer dosage, Disease name, Pest alert, Nut gr
 
 ## **Research Content**
 The Integrated Smart System for Cashew Cultivation (Project ID: 25-26J-175) is a SLIIT research initiative designed to modernize cashew farming using AI, Machine Learning, and Computer Vision. This end-to-end solution addresses critical gaps in traditional agriculture by providing real-time, data-driven insights through four specialized modules. Mithushh P developed the Smart Soil Health Analysis system to estimate nitrogen and moisture levels via smartphone imagery, offering tailored fertilizer recommendations. Thimothy K L engineered the Leaf Disease Detection AI Model, utilizing a two-stage CNN for mobile-based diagnosis of foliar diseases like Anthracnose. Usman M.H created the Agri Doc Pest Identification System, which employs YOLOv8 and Grad-CAM to detect minute pests such as the Tea Mosquito Bug. Finally, Sanoch M developed the Automated Nut Grading System, which uses vision-based density estimation to classify nut quality objectively. Built with a tech stack featuring Python, TensorFlow, PyTorch, and OpenCV, the system promotes sustainable, high-yield agriculture by solving complex technical hurdles like small-object detection and sensor-free soil diagnostics.
+
