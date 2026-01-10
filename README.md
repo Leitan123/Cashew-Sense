@@ -34,6 +34,91 @@ Functionality: Detects diseases such as Anthracnose and Red Rust using a two-sta
 
 4. Integrated Pest Identification System
 Lead: Usman M.H (IT22351104)
+# Cashew Pest Detection System 🌱🐛
+
+An end-to-end **AI-powered pest detection system for cashew plants** using the **YOLOv8 deep learning model**, deployed as a **REST API** with **mobile and web interfaces** to support real-time, eco-friendly pest management.
+
+---
+
+## 🚀 Features
+
+- **YOLOv8 Object Detection**  
+  State-of-the-art deep learning model optimized for real-time and small pest detection.
+
+- **Grad-CAM Visualization (Explainable AI)**  
+  Highlights image regions that influenced predictions, improving transparency and farmer trust.
+
+- **Real-Time Detection**  
+  Fast inference suitable for field-level usage (≤ 5 seconds per image).
+
+- **Eco-Friendly Recommendations**  
+  Provides pest control guidance prioritizing organic and biological methods before chemical treatments.
+
+- **Multi-Platform Support**  
+  Accessible via Web and Mobile applications.
+
+- **Roboflow Integration**  
+  Efficient dataset labeling, augmentation, and version control.
+
+- **Small Object Optimization**  
+  Enhanced preprocessing and multi-scale detection for tiny insects (< 2 pixels).
+
+---
+
+## 🐜 Supported Pests
+
+This system is specialized for detecting **three critical cashew pests**:
+
+### 1. Red Mite (*Oligonychus coffeae*) – **HIGH Severity**
+- Size: 0.3–0.5 mm  
+- Damage: Leaf bronzing, reduced photosynthesis, leaf drop  
+- Conditions: Hot and dry climates  
+- Detection Challenge: Extremely small size
+
+### 2. Stem Borer (*Plocaederus ferrugineus*) – **HIGH Severity**
+- Damage: Tunnels into stem and roots  
+- Symptoms: Wilting, branch dieback, plant death  
+- Detection Challenge: Partial visibility and occlusion
+
+### 3. Thrips (*Scirtothrips dorsalis*) – **MEDIUM Severity**
+- Size: 1–2 mm  
+- Damage: Leaf curling, fruit scarring  
+- Lifecycle: 12–15 generations per year  
+- Detection Challenge: Rapid movement and clustering
+
+---
+
+## 🧠 System Architecture
+
+1. Image capture via mobile camera or upload  
+2. Image preprocessing (resize, normalization, enhancement)  
+3. YOLOv8-based pest detection  
+4. Grad-CAM heatmap generation  
+5. Pest classification and localization  
+6. Eco-friendly treatment recommendation  
+7. Results displayed on web/mobile UI  
+
+---
+
+## 🛠️ Technology Stack
+
+### AI & Computer Vision
+- **YOLOv8**
+- **Grad-CAM**
+- **OpenCV**
+- **Pillow (PIL)**
+
+### Backend
+- **Python**
+- **Flask (REST API)**
+
+### Frontend
+- **React.js**
+- **HTML / CSS / JavaScript**
+
+### Dataset & Training
+- **Custom Cashew Pest Dataset**
+- **Roboflow** (annotation & augmentation)
 
 Focus: Real-time detection of minute pests like the Stem Borer and Tea Mosquito Bug.
 
@@ -76,3 +161,4 @@ Preprocessing: Image resizing, noise reduction, and color normalization.
 Inference: AI models hosted on the cloud process the data.
 
 Actionable Insight: Results (Fertilizer dosage, Disease name, Pest alert, Nut grade) sent back to the farmer's mobile UI.
+
