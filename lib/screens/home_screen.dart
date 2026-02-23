@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Bannerr
+            // Hero Bannerrr
                         Container(
               margin: const EdgeInsets.all(16),
               height: 180,
