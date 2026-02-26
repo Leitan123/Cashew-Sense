@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'leaf_detector.dart';
 import '/widgets/common_widgets.dart';
+import 'soil_analysis_screen.dart';
+import 'pest_detection_screen.dart';
+import 'nut_classification_screen.dart';
+
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -99,23 +104,47 @@ class HomeScreen extends StatelessWidget {
                     },
                   ),
                   _buildFeatureCard(
-                    context,
-                    icon: Icons.eco_outlined,
-                    title: 'Cashew Nut\nClassification',
-                    onTap: () {},
-                  ),
+  context,
+  icon: Icons.eco_outlined,
+  title: 'Cashew Nut\nClassification',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NutClassificationScreen(),
+      ),
+    );
+  },
+),
+
+                 _buildFeatureCard(
+  context,
+  icon: Icons.pest_control_outlined,
+  title: 'Pest Detection',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PestDetectionScreen(), // remove 'const'
+      ),
+    );
+  },
+),
+
                   _buildFeatureCard(
-                    context,
-                    icon: Icons.pest_control_outlined,
-                    title: 'Pest Detection',
-                    onTap: () {},
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.science_outlined,
-                    title: 'Soil Analysis',
-                    onTap: () {},
-                  ),
+  context,
+  icon: Icons.science_outlined,
+  title: 'Soil Analysis',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SoilAnalysisScreen(),
+      ),
+    );
+  },
+),
+
                 ],
               ),
             ),
