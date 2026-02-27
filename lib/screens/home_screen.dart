@@ -4,8 +4,7 @@ import '/widgets/common_widgets.dart';
 import 'soil_analysis_screen.dart';
 import 'pest_detection_screen.dart';
 import 'nut_classification_screen.dart';
-
-
+import 'ble_soil_screen.dart';            // ← NEW
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -54,10 +53,9 @@ class HomeScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         shadows: [
                           Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 3,
-                            color: Colors.black45,
-                          ),
+                              offset: Offset(0, 1),
+                              blurRadius: 3,
+                              color: Colors.black45),
                         ],
                       ),
                     ),
@@ -69,10 +67,9 @@ class HomeScreen extends StatelessWidget {
                         fontSize: 16,
                         shadows: const [
                           Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 3,
-                            color: Colors.black45,
-                          ),
+                              offset: Offset(0, 1),
+                              blurRadius: 3,
+                              color: Colors.black45),
                         ],
                       ),
                     ),
@@ -96,55 +93,44 @@ class HomeScreen extends StatelessWidget {
                     context,
                     icon: Icons.coronavirus_outlined,
                     title: 'Disease Detection',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LeafDetector()),
-                      );
-                    },
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const LeafDetector())),
                   ),
                   _buildFeatureCard(
-  context,
-  icon: Icons.eco_outlined,
-  title: 'Cashew Nut\nClassification',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NutClassificationScreen(),
-      ),
-    );
-  },
-),
-
-                 _buildFeatureCard(
-  context,
-  icon: Icons.pest_control_outlined,
-  title: 'Pest Detection',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PestDetectionScreen(), // remove 'const'
-      ),
-    );
-  },
-),
-
+                    context,
+                    icon: Icons.eco_outlined,
+                    title: 'Cashew Nut\nClassification',
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const NutClassificationScreen())),
+                  ),
                   _buildFeatureCard(
-  context,
-  icon: Icons.science_outlined,
-  title: 'Soil Analysis',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SoilAnalysisScreen(),
-      ),
-    );
-  },
-),
-
+                    context,
+                    icon: Icons.pest_control_outlined,
+                    title: 'Pest Detection',
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => PestDetectionScreen())),
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    icon: Icons.science_outlined,
+                    title: 'Soil Analysis',
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SoilAnalysisScreen())),
+                  ),
+                  // ── NEW card ──────────────────────────────────────────────
+                  _buildFeatureCard(
+                    context,
+                    icon: Icons.bluetooth,
+                    title: 'NPK Sensor\n(Bluetooth)',
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const BleSoilScreen())),
+                  ),
                 ],
               ),
             ),
@@ -154,9 +140,7 @@ class HomeScreen extends StatelessWidget {
       ),
       bottomNavigationBar: buildCashewBottomNav(
         currentIndex: 0,
-        onTap: (index) {
-          // Handle navigation logic
-        },
+        onTap: (index) {},
       ),
     );
   }

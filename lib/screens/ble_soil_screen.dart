@@ -1,11 +1,18 @@
 // File: lib/screens/ble_soil_screen.dart
+//
+// Shows:
+//  • Available BLE devices list (scan)
+//  • Connect to "Soil Sensor BLE"
+//  • Real-time NPK + sensor values (updated every notify / 2 s)
+//  • TFLite soil-health score
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/soil_model_service.dart';
 import '../widgets/common_widgets.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class BleSoilScreen extends StatefulWidget {
   const BleSoilScreen({super.key});
@@ -15,323 +22,534 @@ class BleSoilScreen extends StatefulWidget {
 }
 
 class _BleSoilScreenState extends State<BleSoilScreen> {
+  // ── Services ─────────────────────────────────────────────────────────────
   final SoilModelService _soilModel = SoilModelService();
 
-  // BLE
-  StreamSubscription<List<ScanResult>>? _scanSubscription;
-  BluetoothDevice? _device;
-  BluetoothCharacteristic? _soilCharacteristic;
+  // ── BLE state ────────────────────────────────────────────────────────────
+  StreamSubscription<List<ScanResult>>? _scanSub;
+  StreamSubscription<List<int>>? _notifySub;
+  BluetoothDevice? _connectedDevice;
+  BluetoothCharacteristic? _dataChar;
 
-  // Data
-  String _rawData = '';
-  double? _soilScore;
-  bool _connecting = false;
-  String _statusMessage = 'Press button to scan for sensor';
+  List<ScanResult> _scanResults = [];
+  bool _isScanning = false;
+  bool _isConnecting = false;
+  bool _modelReady = false;
 
+  // ── Sensor data ──────────────────────────────────────────────────────────
+  double? moisture;
+  double? temperature;
+  int? ec;
+  double? ph;
+  int? nitrogen;
+  int? phosphorus;
+  int? potassium;
+  double? soilScore;
+
+  String _status = 'Initialising…';
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _initModelAndScan();
+    _initModel();
   }
 
-  Future<void> _initModelAndScan() async {
+  Future<void> _initModel() async {
     try {
       await _soilModel.loadModel();
-      print("✅ Soil model loaded");
-      setState(() => _statusMessage = 'Model loaded. Ready to scan.');
+      setState(() {
+        _modelReady = true;
+        _status = 'Ready — tap Scan to find your sensor';
+      });
     } catch (e) {
-      print("❌ Soil model load failed: $e");
-      setState(() => _statusMessage = 'Model load failed. Tap to retry.');
+      setState(() => _status = 'Model load failed: $e');
     }
   }
 
-  void _startScan() {
+  @override
+  void dispose() {
+    _stopScan();
+    _notifySub?.cancel();
+    _connectedDevice?.disconnect();
+    _soilModel.close();
+    super.dispose();
+  }
+
+  // ── Scan ─────────────────────────────────────────────────────────────────
+  void _startScan() async {
+    await Permission.bluetoothScan.request();
+  await Permission.bluetoothConnect.request();
+  await Permission.locationWhenInUse.request();
     setState(() {
-      _connecting = true;
-      _statusMessage = 'Scanning for Soil Sensor BLE...';
+      _scanResults.clear();
+      _isScanning = true;
+      _status = 'Scanning…';
     });
 
-    _scanSubscription?.cancel();
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
 
-    _scanSubscription = FlutterBluePlus.scanResults.listen((results) async {
-      for (var r in results) {
-        if (r.device.name == "Soil Sensor BLE") {
-          FlutterBluePlus.stopScan();
-          await _connectToDevice(r.device);
-          return;
-        }
-      }
+    _scanSub = FlutterBluePlus.scanResults.listen((results) {
+      if (!mounted) return;
+      // Deduplicate by device id
+      final seen = <String>{};
+      final unique = results.where((r) => seen.add(r.device.remoteId.str)).toList();
+      setState(() => _scanResults = unique);
     });
 
-    // Timeout handling
-    Future.delayed(const Duration(seconds: 6), () {
-      if (mounted && _connecting && _device == null) {
-        FlutterBluePlus.stopScan();
-        _scanSubscription?.cancel();
-        setState(() {
-          _connecting = false;
-          _statusMessage = 'Device not found. Tap to retry.';
-        });
-        print("⚠️ Scan timeout - device not found");
-      }
+    // Auto-stop
+    Future.delayed(const Duration(seconds: 9), () {
+      if (mounted && _isScanning) _stopScan();
     });
   }
 
-  Future<void> _connectToDevice(BluetoothDevice device) async {
+  void _stopScan() {
+    FlutterBluePlus.stopScan();
+    _scanSub?.cancel();
+    if (mounted) setState(() => _isScanning = false);
+  }
+
+  // ── Connect ───────────────────────────────────────────────────────────────
+  Future<void> _connectTo(BluetoothDevice device) async {
+    _stopScan();
     setState(() {
-      _device = device;
-      _statusMessage = 'Connecting to ${device.name}...';
+      _isConnecting = true;
+      _status = 'Connecting to ${device.platformName.isNotEmpty ? device.platformName : device.remoteId.str}…';
     });
 
     try {
-      await device.connect(autoConnect: false);
-      print("✅ Connected to ${device.name}");
+      await device.connect(autoConnect: false, timeout: const Duration(seconds: 10));
 
-      setState(() => _statusMessage = 'Discovering services...');
-      List<BluetoothService> services = await device.discoverServices();
-      bool foundCharacteristic = false;
+      setState(() => _status = 'Discovering services…');
+      final services = await device.discoverServices();
 
-      for (var service in services) {
-        if (service.uuid.toString() == "12345678-1234-1234-1234-1234567890ab") {
-          for (var char in service.characteristics) {
-            if (char.uuid.toString() == "abcd1234-5678-90ab-cdef-1234567890ab") {
-              _soilCharacteristic = char;
-
-              // Enable notifications
-              await char.setNotifyValue(true);
-              char.value.listen(_onDataReceived);
-
-              foundCharacteristic = true;
-              setState(() => _statusMessage = 'Connected! Waiting for data...');
-              print("✅ Subscribed to soil data notifications");
+      BluetoothCharacteristic? found;
+      for (final svc in services) {
+        if (svc.uuid.toString().toLowerCase() ==
+            '12345678-1234-1234-1234-1234567890ab') {
+          for (final ch in svc.characteristics) {
+            if (ch.uuid.toString().toLowerCase() ==
+                'abcd1234-5678-90ab-cdef-1234567890ab') {
+              found = ch;
               break;
             }
           }
         }
       }
 
-      if (!foundCharacteristic) {
-        setState(() => _statusMessage = 'Service not found. Disconnecting...');
+      if (found == null) {
         await device.disconnect();
-        _device = null;
+        setState(() {
+          _isConnecting = false;
+          _status = 'Compatible service not found on this device.';
+        });
+        return;
       }
-    } catch (e) {
-      print("❌ Connection failed: $e");
-      setState(() => _statusMessage = 'Connection failed. Tap to retry.');
-      _device = null;
-    } finally {
-      setState(() => _connecting = false);
-    }
-  }
 
-  // Notification listener
-  void _onDataReceived(List<int> value) {
-    final csv = utf8.decode(value);
-    setState(() => _rawData = csv);
-  }
-
-  // ✅ Read latest value on button click
-  Future<void> _readCurrentData() async {
-    if (_soilCharacteristic == null) return;
-
-    try {
-      List<int> value = await _soilCharacteristic!.read();
-      final csv = utf8.decode(value);
-
-      final parts = csv.split(',');
-      List<double> parsed = parts.map((p) {
-        try {
-          return double.parse(p);
-        } catch (_) {
-          return 0.0;
-        }
-      }).toList();
-
-      // Fill missing values for model
-      double f1 = parsed.length > 0 ? parsed[0] : 0.0;
-      double f2 = parsed.length > 1 ? parsed[1] : 0.0;
-      double f3 = parsed.length > 2 ? parsed[2] : 0.0;
-      double ph = parsed.length > 3 ? parsed[3] : 0.0;
-      double f5 = parsed.length > 4 ? parsed[4] : 0.0;
-      double f6 = parsed.length > 5 ? parsed[5] : 0.0;
-      double f7 = parsed.length > 6 ? parsed[6] : 0.0;
-
-      double result = _soilModel.predict(
-        f1: f1, f2: f2, f3: f3, ph: ph, f5: f5, f6: f6, f7: f7,
-      );
+      _dataChar = found;
+      await found.setNotifyValue(true);
+      _notifySub = found.lastValueStream.listen(_onData);
 
       setState(() {
-        _soilScore = result;
-        _rawData = parts.join(',');
-        _statusMessage = 'Soil data updated';
+        _connectedDevice = device;
+        _isConnecting = false;
+        _status = 'Connected — receiving live data…';
       });
-
-      print("📊 Soil Health Score: $result");
-      print("Raw CSV: $csv");
     } catch (e) {
-      print("❌ Error reading BLE data: $e");
-      setState(() => _statusMessage = 'Read failed');
+      setState(() {
+        _isConnecting = false;
+        _status = 'Connection failed: $e';
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _scanSubscription?.cancel();
-    _device?.disconnect();
-    _soilModel.close();
-    super.dispose();
+  // ── Disconnect ────────────────────────────────────────────────────────────
+  Future<void> _disconnect() async {
+    _notifySub?.cancel();
+    await _connectedDevice?.disconnect();
+    setState(() {
+      _connectedDevice = null;
+      _dataChar = null;
+      moisture = temperature = ph = soilScore = null;
+      ec = nitrogen = phosphorus = potassium = null;
+      _status = 'Disconnected. Tap Scan to reconnect.';
+    });
   }
 
+  // ── Parse incoming CSV ────────────────────────────────────────────────────
+  void _onData(List<int> raw) {
+    if (raw.isEmpty) return;
+    final csv = utf8.decode(raw);
+    final parts = csv.split(',');
+    if (parts.length < 7) return;
+
+    double parse(String s) => double.tryParse(s.trim()) ?? 0.0;
+    int parseInt(String s) => int.tryParse(s.trim()) ?? 0;
+
+    final m  = parse(parts[0]);
+    final t  = parse(parts[1]);
+    final e  = parseInt(parts[2]);
+    final p  = parse(parts[3]);
+    final n  = parseInt(parts[4]);
+    final ph2= parseInt(parts[5]);
+    final k  = parseInt(parts[6]);
+
+    double? score;
+    if (_modelReady) {
+      try {
+        score = _soilModel.predict(
+          f1: m,
+          f2: t,
+          f3: e.toDouble(),
+          ph: p,
+          f5: n.toDouble(),
+          f6: ph2.toDouble(),
+          f7: k.toDouble(),
+        );
+      } catch (_) {}
+    }
+
+    setState(() {
+      moisture    = m;
+      temperature = t;
+      ec          = e;
+      ph          = p;
+      nitrogen    = n;
+      phosphorus  = ph2;
+      potassium   = k;
+      soilScore   = score;
+    });
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────────────
+  Color _scoreColor(double s) {
+    if (s >= 75) return Colors.green;
+    if (s >= 50) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _scoreLabel(double s) {
+    if (s >= 75) return 'Healthy';
+    if (s >= 50) return 'Moderate';
+    return 'Poor';
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: buildCashewAppBar(title: 'Soil Health BLE'),
+      appBar: buildCashewAppBar(title: 'NPK Soil Sensor'),
       backgroundColor: const Color(0xFFF5F5DC),
-      body: Center(
-        child: _connecting
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 20),
-                  Text(
-                    _statusMessage,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              )
-            : Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.thermostat, size: 100, color: Colors.brown),
-                    const SizedBox(height: 20),
-                    Text(
-                      _statusMessage,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    if (_device != null)
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.bluetooth_connected,
-                                color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Connected: ${_device!.name}',
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    if (_rawData.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(15),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Raw Sensor Data:',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _rawData,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 30),
-                    Text(
-                      _soilScore != null
-                          ? 'Soil Health Score: ${_soilScore!.toStringAsFixed(2)}'
-                          : 'Soil Health Score: --',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: _soilScore != null ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed:
-                              _device == null ? _startScan : _readCurrentData,
-                          icon: Icon(
-                              _device == null
-                                  ? Icons.bluetooth_searching
-                                  : Icons.refresh,
-                              color: Colors.white),
-                          label: Text(
-                              _device == null
-                                  ? 'Scan for Soil Sensor'
-                                  : 'Read Current Data',
-                              style: const TextStyle(color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 15),
-                            backgroundColor: Colors.brown,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        if (_device != null)
-                          TextButton.icon(
-                            onPressed: () async {
-                              await _device?.disconnect();
-                              setState(() {
-                                _device = null;
-                                _soilScore = null;
-                                _rawData = '';
-                                _statusMessage =
-                                    'Disconnected. Tap to scan again.';
-                              });
-                            },
-                            icon: const Icon(Icons.bluetooth_disabled,
-                                color: Colors.red),
-                            label: const Text(
-                              'Disconnect',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildStatusBar(),
+            const SizedBox(height: 12),
+            if (_connectedDevice == null) ...[
+              _buildScanButton(),
+              const SizedBox(height: 12),
+              if (_scanResults.isNotEmpty) _buildDeviceList(),
+            ] else ...[
+              _buildConnectedBadge(),
+              const SizedBox(height: 16),
+              _buildSensorGrid(),
+              const SizedBox(height: 16),
+              if (soilScore != null) _buildScoreCard(),
+              const SizedBox(height: 20),
+              _buildDisconnectButton(),
+            ],
+          ],
+        ),
       ),
     );
   }
+
+  // Status banner
+  Widget _buildStatusBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 18, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(_status,
+                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+          ),
+          if (_isScanning || _isConnecting)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Scan button
+  Widget _buildScanButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isScanning ? _stopScan : _startScan,
+        icon: Icon(_isScanning ? Icons.stop : Icons.bluetooth_searching,
+            color: Colors.white),
+        label: Text(_isScanning ? 'Stop Scan' : 'Scan for Devices',
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2E3A20),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  // Scanned device list
+  Widget _buildDeviceList() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 4),
+            child: Text('Available Devices',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          const Divider(height: 1),
+          ..._scanResults.map((r) {
+            final name = r.device.platformName.isNotEmpty
+                ? r.device.platformName
+                : 'Unknown (${r.device.remoteId.str})';
+            final isSoil = r.device.platformName == 'Soil Sensor BLE';
+            return ListTile(
+              leading: Icon(Icons.bluetooth,
+                  color: isSoil ? Colors.green : Colors.grey),
+              title: Text(name,
+                  style: TextStyle(
+                      fontWeight: isSoil
+                          ? FontWeight.bold
+                          : FontWeight.normal)),
+              subtitle: Text('RSSI: ${r.rssi} dBm  •  ${r.device.remoteId.str}',
+                  style: const TextStyle(fontSize: 11)),
+              trailing: isSoil
+                  ? ElevatedButton(
+                      onPressed: _isConnecting
+                          ? null
+                          : () => _connectTo(r.device),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                      ),
+                      child: const Text('Connect',
+                          style: TextStyle(color: Colors.white)),
+                    )
+                  : TextButton(
+                      onPressed: _isConnecting
+                          ? null
+                          : () => _connectTo(r.device),
+                      child: const Text('Connect'),
+                    ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // Connected badge
+  Widget _buildConnectedBadge() {
+    final name = _connectedDevice?.platformName.isNotEmpty == true
+        ? _connectedDevice!.platformName
+        : _connectedDevice?.remoteId.str ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.green.shade300),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bluetooth_connected, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Connected to $name',
+                style: const TextStyle(
+                    color: Colors.green, fontWeight: FontWeight.bold)),
+          ),
+          const Icon(Icons.circle, color: Colors.green, size: 10),
+          const SizedBox(width: 4),
+          const Text('Live', style: TextStyle(color: Colors.green, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  // 7-value sensor grid
+  Widget _buildSensorGrid() {
+    final items = [
+      _SensorItem('Moisture', moisture?.toStringAsFixed(1) ?? '--', '%', Icons.water_drop, Colors.blue),
+      _SensorItem('Temperature', temperature?.toStringAsFixed(1) ?? '--', '°C', Icons.thermostat, Colors.orange),
+      _SensorItem('EC', ec?.toString() ?? '--', 'µS/cm', Icons.electric_bolt, Colors.purple),
+      _SensorItem('pH', ph?.toStringAsFixed(1) ?? '--', '', Icons.science, Colors.teal),
+      _SensorItem('Nitrogen', nitrogen?.toString() ?? '--', 'mg/kg', Icons.grass, Colors.green),
+      _SensorItem('Phosphorus', phosphorus?.toString() ?? '--', 'mg/kg', Icons.bubble_chart, Colors.amber.shade700),
+      _SensorItem('Potassium', potassium?.toString() ?? '--', 'mg/kg', Icons.grain, Colors.red.shade400),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: items.length,
+      itemBuilder: (_, i) => _buildSensorCard(items[i]),
+    );
+  }
+
+  Widget _buildSensorCard(_SensorItem item) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(item.icon, color: item.color, size: 20),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(item.label,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(item.value,
+                  style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: item.color)),
+              const SizedBox(width: 4),
+              if (item.unit.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(item.unit,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade500)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Score card
+  Widget _buildScoreCard() {
+    final score = soilScore!;
+    final color = _scoreColor(score);
+    final label = _scoreLabel(score);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.15), color.withOpacity(0.05)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Column(
+        children: [
+          Text('Soil Health Score',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700)),
+          const SizedBox(height: 8),
+          Text(score.toStringAsFixed(1),
+              style: TextStyle(
+                  fontSize: 52,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Disconnect button
+  Widget _buildDisconnectButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _disconnect,
+        icon: const Icon(Icons.bluetooth_disabled, color: Colors.red),
+        label: const Text('Disconnect',
+            style: TextStyle(color: Colors.red, fontSize: 15)),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.red),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Data class ─────────────────────────────────────────────────────────────
+class _SensorItem {
+  final String label;
+  final String value;
+  final String unit;
+  final IconData icon;
+  final Color color;
+  const _SensorItem(this.label, this.value, this.unit, this.icon, this.color);
 }
