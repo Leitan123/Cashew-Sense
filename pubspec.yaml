@@ -39,4 +39,4 @@ flutter:
     - assets/main_slide.jpg
     - assets/leaf_banner.jpg
     - assets/soil_health_model.tflite
-    - assets/best_float32.tflite
+    - assets/best_float_new.tflite
