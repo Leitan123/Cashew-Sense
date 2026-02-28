@@ -41,3 +41,4 @@ flutter:
     - assets/leaf_banner.jpg
     - assets/soil_health_model.tflite
     - assets/best_float32.tflite
+    - assets/trunk_classifier.tflite 
