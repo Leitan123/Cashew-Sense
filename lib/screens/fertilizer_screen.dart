@@ -668,7 +668,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              'These recommendations are based on AI analysis of trunk size and soil sensor data. '
+              'These recommendations are based on  trunk size and soil sensor data. '
               'Always consult a local agronomist for region-specific advice.',
               style: TextStyle(fontSize: 12, color: Colors.black87),
             ),
