@@ -16,6 +16,7 @@ dependencies:
   image: ^4.5.4 # Add this
   #flutter_blue: ^0.8.0
   flutter_blue_plus: ^1.36.8
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
@@ -40,3 +41,5 @@ flutter:
     - assets/leaf_banner.jpg
     - assets/soil_health_model.tflite
     - assets/best_float_new.tflite
+    - assets/best_float32.tflite
+    - assets/trunk_classifier.tflite

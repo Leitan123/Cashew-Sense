@@ -4,8 +4,8 @@ import '/widgets/common_widgets.dart';
 import 'soil_analysis_screen.dart';
 import 'pest_detection_screen.dart';
 import 'nut_classification_screen.dart';
-
-
+import 'ble_soil_screen.dart';
+import 'fertilizer_screen.dart';   // ← NEW
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,7 +18,6 @@ class HomeScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Banner
             Container(
               margin: const EdgeInsets.all(16),
               height: 180,
@@ -53,11 +52,7 @@ class HomeScreen extends StatelessWidget {
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         shadows: [
-                          Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 3,
-                            color: Colors.black45,
-                          ),
+                          Shadow(offset: Offset(0, 1), blurRadius: 3, color: Colors.black45),
                         ],
                       ),
                     ),
@@ -68,11 +63,7 @@ class HomeScreen extends StatelessWidget {
                         color: Colors.white.withOpacity(0.95),
                         fontSize: 16,
                         shadows: const [
-                          Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 3,
-                            color: Colors.black45,
-                          ),
+                          Shadow(offset: Offset(0, 1), blurRadius: 3, color: Colors.black45),
                         ],
                       ),
                     ),
@@ -80,8 +71,6 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Feature Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.count(
@@ -92,59 +81,36 @@ class HomeScreen extends StatelessWidget {
                 crossAxisSpacing: 16,
                 childAspectRatio: 1.1,
                 children: [
-                  _buildFeatureCard(
-                    context,
-                    icon: Icons.coronavirus_outlined,
-                    title: 'Disease Detection',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LeafDetector()),
-                      );
-                    },
-                  ),
-                  _buildFeatureCard(
-  context,
-  icon: Icons.eco_outlined,
-  title: 'Cashew Nut\nClassification',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NutClassificationScreen(),
-      ),
-    );
-  },
-),
-
-                 _buildFeatureCard(
-  context,
-  icon: Icons.pest_control_outlined,
-  title: 'Pest Detection',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PestDetectionScreen(), // remove 'const'
-      ),
-    );
-  },
-),
-
-                  _buildFeatureCard(
-  context,
-  icon: Icons.science_outlined,
-  title: 'Soil Analysis',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SoilAnalysisScreen(),
-      ),
-    );
-  },
-),
-
+                  _buildFeatureCard(context,
+                      icon: Icons.coronavirus_outlined,
+                      title: 'Disease\nDetection',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const LeafDetector()))),
+                  _buildFeatureCard(context,
+                      icon: Icons.eco_outlined,
+                      title: 'Cashew Nut\nClassification',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const NutClassificationScreen()))),
+                  _buildFeatureCard(context,
+                      icon: Icons.pest_control_outlined,
+                      title: 'Pest\nDetection',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => PestDetectionScreen()))),
+                  _buildFeatureCard(context,
+                      icon: Icons.science_outlined,
+                      title: 'Soil\nAnalysis',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const SoilAnalysisScreen()))),
+                  _buildFeatureCard(context,
+                      icon: Icons.bluetooth,
+                      title: 'NPK Sensor\n(Bluetooth)',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const BleSoilScreen()))),
+                  _buildFeatureCard(context,
+                      icon: Icons.agriculture,
+                      title: 'Fertilizer\nAdvisor',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const FertilizerScreen()))),
                 ],
               ),
             ),
@@ -154,19 +120,15 @@ class HomeScreen extends StatelessWidget {
       ),
       bottomNavigationBar: buildCashewBottomNav(
         currentIndex: 0,
-        onTap: (index) {
-          // Handle navigation logic
-        },
+        onTap: (index) {},
       ),
     );
   }
 
-  Widget _buildFeatureCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildFeatureCard(BuildContext context,
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -175,10 +137,9 @@ class HomeScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -187,22 +148,18 @@ class HomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, size: 40, color: const Color(0xFF2E3A20)),
             ),
             const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2E3A20),
-                height: 1.2,
-              ),
-            ),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E3A20),
+                    height: 1.2)),
           ],
         ),
       ),

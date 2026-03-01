@@ -91,6 +91,8 @@ The system aims to reduce a 30-40% annual yield loss caused by undetected pests/
 **Mobile App / Frontend** 
 - Flutter / React Native
 
+Terminal: flutter build apk --debug; flutter install --debug -d RF8N63YHZTM
+
 **Backend API**
 - FastAPI / Flask
 
