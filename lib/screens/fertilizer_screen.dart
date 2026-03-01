@@ -310,13 +310,13 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('📸 Step 1: Capture Trunk Image'),
+            _buildSectionHeader('📸 Capture Trunk Image'),
             const SizedBox(height: 10),
             _buildImageSection(),
             const SizedBox(height: 20),
             if (_trunkResult != null) _buildTrunkResult(),
             const SizedBox(height: 20),
-            _buildSectionHeader('🌿 Step 2: Soil NPK Values'),
+            _buildSectionHeader('🌿 Soil NPK Values'),
             const SizedBox(height: 10),
             _buildNpkInputs(),
             const SizedBox(height: 20),
