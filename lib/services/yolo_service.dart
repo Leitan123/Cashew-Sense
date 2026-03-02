@@ -7,14 +7,20 @@ class YoloService {
   bool _isLoaded = false;
   
   // Assuming classes map to 0: Grade_A, 1: Grade_B, 2: Grade_C based on typical grading models.
-  final List<String> classNames = ["Grade_A", "Grade_B", "Grade_C"];
+  List<String> classNames = ["Grade_A", "Grade_B", "Grade_C"];
 
   bool get isLoaded => _isLoaded;
 
-  Future<void> loadModel() async {
-    _interpreter = await Interpreter.fromAsset('assets/best_float_new.tflite');
+  Future<void> loadModel({
+    String modelPath = 'assets/best_float_new.tflite',
+    List<String>? classes,
+  }) async {
+    _interpreter = await Interpreter.fromAsset(modelPath);
+    if (classes != null) {
+      classNames = classes;
+    }
     _isLoaded = true;
-    print("✅ YOLO TFLite model loaded");
+    print("✅ YOLO TFLite model loaded from $modelPath");
   }
 
   Future<List<List<double>>> predict(File imageFile) async {

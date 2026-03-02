@@ -43,3 +43,4 @@ flutter:
     - assets/best_float_new.tflite
     - assets/best_float32.tflite
     - assets/trunk_classifier.tflite
+    - assets/pest_model.tflite
