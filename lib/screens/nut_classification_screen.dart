@@ -197,8 +197,8 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                             children: [
                               Icon(Icons.circle, size: 7, color: _lime),
                               const SizedBox(width: 5),
-                              const Text('AI POWERED',
-                                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                              Text('AI POWERED'.tr(context),
+                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                             ],
                           ),
                         ),
@@ -207,14 +207,14 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                           text: TextSpan(
                             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                             children: [
-                              const TextSpan(text: 'Cashew Nut\n'),
-                              TextSpan(text: 'Classification', style: TextStyle(color: _lime)),
+                              TextSpan(text: 'Cashew Nut\n'.tr(context)),
+                              TextSpan(text: 'Classification'.tr(context), style: TextStyle(color: _lime)),
                             ],
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Upload a nut image and enter its weight for grade prediction.',
+                          'Upload a nut image and enter its weight for grade prediction.'.tr(context),
                           style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 13, height: 1.5),
                         ),
                       ],
@@ -224,7 +224,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                   const SizedBox(height: 24),
 
                   // ── Image Picker ─────────────────────────────────────────
-                  Text('UPLOAD IMAGE',
+                  Text('UPLOAD IMAGE'.tr(context),
                       style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                   const SizedBox(height: 12),
 
@@ -253,9 +253,9 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                                     child: const Icon(Icons.eco, color: Colors.white, size: 28),
                                   ),
                                   const SizedBox(height: 14),
-                                  Text('Tap to select image', style: TextStyle(color: _cream, fontSize: 15, fontWeight: FontWeight.w500)),
+                                  Text('Tap to select image'.tr(context), style: TextStyle(color: _cream, fontSize: 15, fontWeight: FontWeight.w500)),
                                   const SizedBox(height: 4),
-                                  Text('from your gallery', style: TextStyle(color: _cream.withOpacity(0.35), fontSize: 13)),
+                                  Text('from your gallery'.tr(context), style: TextStyle(color: _cream.withOpacity(0.35), fontSize: 13)),
                                 ],
                               ),
                             )
@@ -289,7 +289,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                   // ── Results Card ─────────────────────────────────────────
                   if (_finalGrade.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    Text('RESULTS',
+                    Text('RESULTS'.tr(context),
                         style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                     const SizedBox(height: 12),
                     Container(
@@ -302,9 +302,9 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildResultRow(Icons.psychology_outlined, 'Model Prediction', _modelGrade, _lime),
+                          _buildResultRow(Icons.psychology_outlined, 'Model Prediction'.tr(context), _modelGrade, _lime),
                           const Divider(height: 20, color: Color(0x1Af5f0e8)),
-                          _buildResultRow(Icons.scale_outlined, 'Weight-Based Grade', _weightGrade, Colors.lightBlueAccent),
+                          _buildResultRow(Icons.scale_outlined, 'Weight-Based Grade'.tr(context), _weightGrade, Colors.lightBlueAccent),
                           const Divider(height: 20, color: Color(0x1Af5f0e8)),
                           // Final grade badge
                           Row(
@@ -321,7 +321,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('FINAL GRADE',
+                                  Text('FINAL GRADE'.tr(context),
                                       style: TextStyle(color: _cream.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                                   const SizedBox(height: 2),
                                   Text(_finalGrade,
@@ -352,17 +352,17 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                   const SizedBox(height: 24),
 
                   // ── Weight Input ─────────────────────────────────────────
-                  Text('WEIGHT INPUT',
+                  Text('WEIGHT INPUT'.tr(context),
                       style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _weightController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     style: TextStyle(color: _cream),
-                    decoration: const InputDecoration(
-                      labelText: 'Weight (g)',
-                      hintText: 'e.g. 12.75',
-                      prefixIcon: Icon(Icons.scale, color: _lime, size: 20),
+                    decoration: InputDecoration(
+                      labelText: 'Weight (g)'.tr(context),
+                      hintText: 'e.g. 12.75'.tr(context),
+                      prefixIcon: const Icon(Icons.scale, color: _lime, size: 20),
                     ),
                   ),
 
@@ -383,7 +383,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.auto_awesome, color: Colors.white),
                       label: Text(
-                        _loading ? 'Classifying...' : 'Classify Nut',
+                        _loading ? 'Classifying...'.tr(context) : 'Classify Nut'.tr(context),
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(

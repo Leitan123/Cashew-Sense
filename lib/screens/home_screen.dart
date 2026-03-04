@@ -157,6 +157,7 @@ class HomeScreen extends StatelessWidget {
                       iconColor: Colors.orangeAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => PestDetectionScreen()))),
+                  /*
                   _buildFeatureCard(context,
                       icon: Icons.science_outlined,
                       title: 'Soil\nAnalysis'.tr(context),
@@ -164,6 +165,7 @@ class HomeScreen extends StatelessWidget {
                       iconColor: Colors.tealAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const SoilAnalysisScreen()))),
+                  */
                   _buildFeatureCard(context,
                       icon: Icons.bluetooth_rounded,
                       title: 'NPK Sensor\n(Bluetooth)'.tr(context),

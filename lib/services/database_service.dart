@@ -14,7 +14,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE scans (
@@ -24,6 +24,26 @@ class DatabaseService {
             timestamp INTEGER NOT NULL
           )
         ''');
+        await db.execute('''
+          CREATE TABLE pest_scans (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            imagePath TEXT    NOT NULL,
+            pestName  TEXT    NOT NULL,
+            timestamp INTEGER NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE pest_scans (
+              id        INTEGER PRIMARY KEY AUTOINCREMENT,
+              imagePath TEXT    NOT NULL,
+              pestName  TEXT    NOT NULL,
+              timestamp INTEGER NOT NULL
+            )
+          ''');
+        }
       },
     );
   }
@@ -58,6 +78,35 @@ class DatabaseService {
   /// Delete a scan by its id.
   Future<void> deleteScan(int id) async {
     await _database.delete('scans', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ====== PEST SCANS ======
+
+  /// Insert a new pest scan record. Returns the new row id.
+  Future<int> insertPestScan(String imagePath, String pestName) async {
+    return await _database.insert(
+      'pest_scans',
+      {
+        'imagePath': imagePath,
+        'pestName': pestName,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Returns the [limit] most-recent pest scans, newest first.
+  Future<List<Map<String, dynamic>>> getPestScans({int limit = 20}) async {
+    return await _database.query(
+      'pest_scans',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  /// Delete a pest scan by its id.
+  Future<void> deletePestScan(int id) async {
+    await _database.delete('pest_scans', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> close() async {

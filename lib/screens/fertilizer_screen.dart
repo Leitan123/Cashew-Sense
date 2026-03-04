@@ -425,20 +425,20 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('📸 Capture Trunk Image'),
+            _buildSectionHeader('📸 ' + 'Capture Trunk Image'.tr(context)),
             const SizedBox(height: 10),
             _buildImageSection(),
             const SizedBox(height: 20),
             if (_trunkResult != null) _buildTrunkResult(),
             const SizedBox(height: 20),
-            _buildSectionHeader('🌿 Soil NPK Values'),
+            _buildSectionHeader('🌿 ' + 'Soil NPK Values'.tr(context)),
             const SizedBox(height: 10),
             _buildNpkInputs(),
             const SizedBox(height: 20),
             _buildGenerateButton(),
             const SizedBox(height: 20),
             if (_recommendations != null) ...[
-              _buildSectionHeader('💊 Fertilizer Recommendations'),
+              _buildSectionHeader('💊 ' + 'Fertilizer Recommendations'.tr(context)),
               const SizedBox(height: 10),
               ..._recommendations!.map(_buildRecCard),
               const SizedBox(height: 10),
@@ -510,7 +510,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                       child: const Icon(Icons.photo_camera, size: 36, color: Colors.white),
                     ),
                     const SizedBox(height: 12),
-                    Text('No image selected', style: TextStyle(color: _cream.withOpacity(0.4))),
+                    Text('No image selected'.tr(context), style: TextStyle(color: _cream.withOpacity(0.4))),
                   ],
                 ),
               ),
@@ -523,7 +523,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                 children: [
                   CircularProgressIndicator(color: _lime, strokeWidth: 2),
                   const SizedBox(width: 12),
-                  Text('Classifying trunk size...', style: TextStyle(color: _cream.withOpacity(0.7))),
+                  Text('Classifying trunk size...'.tr(context), style: TextStyle(color: _cream.withOpacity(0.7))),
                 ],
               ),
             ),
@@ -540,7 +540,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      label: const Text('Camera', style: TextStyle(color: Colors.white)),
+                      label: Text('Camera'.tr(context), style: const TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -560,7 +560,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () => _pickImage(ImageSource.gallery),
                       icon: const Icon(Icons.photo_library, color: Colors.white),
-                      label: const Text('Gallery', style: TextStyle(color: Colors.white)),
+                      label: Text('Gallery'.tr(context), style: const TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -624,9 +624,9 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Trunk Size: $label',
+                Text('${'Trunk Size: '.tr(context)}$label',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors[index])),
-                Text('Confidence: $confidence%',
+                Text('${'Confidence: '.tr(context)}$confidence%',
                     style: TextStyle(fontSize: 13, color: colors[index].withOpacity(0.8))),
                 const SizedBox(height: 4),
                 Text(descs[index],
@@ -664,7 +664,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                 children: [
                   Icon(Icons.bluetooth_connected, color: _lime, size: 16),
                   const SizedBox(width: 6),
-                  Text('Values auto-filled from BLE sensor',
+                  Text('Values auto-filled from BLE sensor'.tr(context),
                       style: TextStyle(color: _lime, fontSize: 12)),
                 ],
               ),
@@ -714,9 +714,9 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
       child: ElevatedButton.icon(
         onPressed: _generateRecommendation,
         icon: const Icon(Icons.auto_awesome, color: Colors.white),
-        label: const Text(
-          'Generate Fertilizer Recommendation',
-          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+        label: Text(
+          'Generate Fertilizer Recommendation'.tr(context),
+          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
@@ -779,11 +779,11 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                 style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.8), height: 1.4),
               ),
             ),
-            _recRow(Icons.local_florist, 'Use', rec.fertilizer),
+            _recRow(Icons.local_florist, 'Use'.tr(context), rec.fertilizer),
             const SizedBox(height: 6),
-            _recRow(Icons.scale, 'Amount', rec.dose),
+            _recRow(Icons.scale, 'Amount'.tr(context), rec.dose),
             const SizedBox(height: 6),
-            _recRow(Icons.schedule, 'When', rec.timing),
+            _recRow(Icons.schedule, 'When'.tr(context), rec.timing),
           ],
         ),
       ),

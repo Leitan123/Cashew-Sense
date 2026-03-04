@@ -71,9 +71,9 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
   }
 
   String _scoreLabel(double score) {
-    if (score >= 0.7) return 'Excellent';
-    if (score >= 0.5) return 'Moderate';
-    return 'Poor';
+    if (score >= 0.7) return 'Excellent'.tr(context);
+    if (score >= 0.5) return 'Moderate'.tr(context);
+    return 'Poor'.tr(context);
   }
 
   Color _scoreColor(double score) {
@@ -126,10 +126,10 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
                             children: [
                               Icon(Icons.science_outlined, color: _lime, size: 36),
                               const SizedBox(height: 12),
-                              Text('Soil Health Analysis',
+                              Text('Soil Health Analysis'.tr(context),
                                   style: TextStyle(color: _cream, fontSize: 22, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 6),
-                              Text('Run the model to evaluate your soil health score.',
+                              Text('Run the model to evaluate your soil health score.'.tr(context),
                                   style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13, height: 1.5)),
                             ],
                           ),
@@ -170,7 +170,7 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
                             ),
                             child: Column(
                               children: [
-                                Text('SOIL HEALTH SCORE',
+                                Text('SOIL HEALTH SCORE'.tr(context),
                                     style: TextStyle(color: _cream.withOpacity(0.35), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.8)),
                                 const SizedBox(height: 16),
                                 Text(
@@ -205,7 +205,7 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
                               children: [
                                 Icon(Icons.grass_outlined, size: 80, color: _cream.withOpacity(0.1)),
                                 const SizedBox(height: 16),
-                                Text('No results yet', style: TextStyle(color: _cream.withOpacity(0.25), fontSize: 15)),
+                                Text('No results yet'.tr(context), style: TextStyle(color: _cream.withOpacity(0.25), fontSize: 15)),
                               ],
                             ),
                           ),
@@ -221,8 +221,8 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _runPrediction,
                             icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
-                            label: const Text('Predict Soil Health',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                            label: Text('Predict Soil Health'.tr(context),
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,

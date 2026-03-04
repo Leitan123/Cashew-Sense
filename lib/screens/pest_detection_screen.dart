@@ -4,6 +4,11 @@ import 'package:image_picker/image_picker.dart';
 import '../services/yolo_service.dart';
 import '../widgets/common_widgets.dart';
 import '../services/localization_service.dart';
+import 'package:provider/provider.dart';
+import '../data/pest_database.dart';
+import '../services/database_service.dart';
+import '../screens/pest_scan_detail_screen.dart';
+
 class PestDetectionScreen extends StatefulWidget {
   const PestDetectionScreen({super.key});
 
@@ -25,10 +30,25 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
   final Color _cream = const Color(0xFFf5f0e8);
   final Color _charcoal = const Color(0xFF1e2820);
 
+  List<Map<String, dynamic>> _recentScans = [];
+
   @override
   void initState() {
     super.initState();
+    _initDb();
     _loadModel();
+  }
+
+  Future<void> _initDb() async {
+    await DatabaseService.instance.init();
+    await _loadScansFromDb();
+  }
+
+  Future<void> _loadScansFromDb() async {
+    final rows = await DatabaseService.instance.getPestScans(limit: 20);
+    setState(() {
+      _recentScans = rows;
+    });
   }
 
   Future<void> _loadModel() async {
@@ -80,6 +100,18 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 
     setState(() {
       _predictions = results;
+    });
+
+    if (_predictions.isNotEmpty) {
+      int topClassIdx = _getTopPredictionClassIndex();
+      if (topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length) {
+        String detectedLabel = _yoloService.classNames[topClassIdx];
+        await DatabaseService.instance.insertPestScan(_imageFile!.path, detectedLabel);
+        await _loadScansFromDb();
+      }
+    }
+
+    setState(() {
       _loading = false;
     });
   }
@@ -101,7 +133,9 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
         ? _yoloService.classNames[topClassIdx] 
         : '';
         
-    Map<String, dynamic>? recommendation =_pestDatabase[detectedLabel];
+    final String currentLang = Provider.of<LocalizationService>(context).currentLanguage;
+    final Map<String, dynamic> langDb = localizedPestDatabase[currentLang] ?? localizedPestDatabase['en']!;
+    Map<String, dynamic>? recommendation = langDb[detectedLabel];
 
     return Scaffold(
       backgroundColor: _charcoal,
@@ -158,6 +192,10 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                   
                   // Right Panel (Recommendations)
                   _buildRecommendationsPanel(detectedLabel, recommendation),
+                  const SizedBox(height: 32),
+
+                  // Recent Scans
+                  _buildRecentScansSection(currentLang),
                 ],
               ),
             ),
@@ -209,15 +247,15 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
             text: TextSpan(
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Playfair Display'),
               children: [
-                const TextSpan(text: 'Cashew '),
-                TextSpan(text: 'Pest', style: TextStyle(color: _lime)),
-                const TextSpan(text: '\nDetection'),
+                TextSpan(text: 'Cashew '.tr(context)),
+                TextSpan(text: 'Pest'.tr(context), style: TextStyle(color: _lime)),
+                TextSpan(text: '\nDetection'.tr(context)),
               ],
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Upload a leaf or nut photo for instant pest identification and treatment advice.',
+            'Upload a leaf or nut photo for instant pest identification and treatment advice.'.tr(context),
             style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 16),
@@ -247,7 +285,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('UPLOAD IMAGE', style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+          Text('UPLOAD IMAGE'.tr(context), style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           
           InkWell(
@@ -274,12 +312,12 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                     child: const Icon(Icons.science, color: Colors.white, size: 28),
                   ),
                   const SizedBox(height: 16),
-                  Text('Tap to pick image', style: TextStyle(color: _cream, fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text('Tap to pick image'.tr(context), style: TextStyle(color: _cream, fontSize: 15, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
-                  Text('from your gallery or camera', style: TextStyle(color: _cream.withOpacity(0.4), fontSize: 13)),
+                  Text('from your gallery or camera'.tr(context), style: TextStyle(color: _cream.withOpacity(0.4), fontSize: 13)),
                   if (_imageFile != null) ...[
                     const SizedBox(height: 12),
-                    Text('✓ Selected Image', style: TextStyle(color: _lime, fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text('✓ Selected Image'.tr(context), style: TextStyle(color: _lime, fontSize: 13, fontWeight: FontWeight.bold)),
                   ]
                 ],
               ),
@@ -293,7 +331,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 
           if (_imageFile != null && !_loading) ...[
             const SizedBox(height: 24),
-            Text('DETECTION OUTPUT', style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+            Text('DETECTION OUTPUT'.tr(context), style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -345,7 +383,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                         Text('DETECTED PEST', style: TextStyle(color: _cream.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                         Text('DETECTED PEST'.tr(context), style: TextStyle(color: _cream.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                          const SizedBox(height: 2),
                          Text(detectedLabel, style: TextStyle(color: _lime, fontSize: 16, fontWeight: FontWeight.bold)),
                          if (recommendation != null)
@@ -378,7 +416,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
   Widget _buildRecommendationsPanel(String detectedLabel, Map<String, dynamic>? rec) {
     if (_imageFile == null) {
       // Empty state waiting
-      return _buildEmptyState('🌱', 'Awaiting Detection', 'Upload a cashew leaf or nut image above. Recommendations will appear here after analysis.');
+      return _buildEmptyState('🌱', 'Awaiting Detection'.tr(context), 'Upload a cashew leaf or nut image above. Recommendations will appear here after analysis.'.tr(context));
     } else if (_loading) {
        return const SizedBox.shrink();
     } else if (detectedLabel.isNotEmpty && rec == null) {
@@ -396,7 +434,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('About This Pest'),
+            _buildSectionTitle('About This Pest'.tr(context)),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -408,7 +446,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
             ),
             
             const SizedBox(height: 24),
-            _buildSectionTitle('Symptoms to Look For'),
+            _buildSectionTitle('Symptoms to Look For'.tr(context)),
             ...(rec['symptoms'] as List<String>).map((sym) => Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Container(
@@ -430,13 +468,13 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
             
             if (rec['treatments'] != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Treatment Options'),
+              _buildSectionTitle('Treatment Options'.tr(context)),
               ...(rec['treatments'] as List<dynamic>).map((t) => _buildTreatmentCard(t)),
             ],
 
             if (rec['prevention'] != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Prevention Measures'),
+              _buildSectionTitle('Prevention Measures'.tr(context)),
               ...(rec['prevention'] as List<dynamic>).map((p) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(16),
@@ -466,7 +504,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 
              if (rec['additional_info'] != null) ...[
                 const SizedBox(height: 24),
-                _buildSectionTitle('Additional Notes'),
+                _buildSectionTitle('Additional Notes'.tr(context)),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -491,6 +529,166 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
     }
     
     return const SizedBox.shrink();
+  }
+
+  Widget _buildRecentScansSection(String currentLang) {
+    if (_recentScans.isEmpty) return const SizedBox.shrink();
+
+    final recentScansText = {
+      'en': 'RECENT SCANS',
+      'si': 'මෑතකදී කළ පරීක්ෂණ',
+      'ta': 'சமீபத்திய ஸ்கேன்கள்',
+    };
+    final deleteTitles = {
+      'en': 'Delete Scan?',
+      'si': 'පරීක්ෂණය මකා දමන්නද?',
+      'ta': 'ஸ்கேனை நீக்கவா?',
+    };
+    final deleteMsg = {
+      'en': 'Remove this scan from your history?',
+      'si': 'මෙම පරීක්ෂණය ඉතිහාසයෙන් ඉවත් කරන්නද?',
+      'ta': 'இந்த ஸ்கேனை வரலாற்றிலிருந்து அகற்றவா?',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              recentScansText[currentLang] ?? 'RECENT SCANS',
+              style: TextStyle(
+                color: _cream.withOpacity(0.35),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.07))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _recentScans.length,
+            itemBuilder: (context, index) {
+              final scan = _recentScans[index];
+              final imageFile = File(scan['imagePath'] as String);
+              final pest = scan['pestName'] as String;
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PestScanDetailScreen(
+                        imagePath: imageFile.path,
+                        pestName: pest,
+                      ),
+                    ),
+                  );
+                },
+                onLongPress: () async {
+                  final id = scan['id'] as int;
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: const Color(0xFF1e2820),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(color: _lime.withOpacity(0.18)),
+                      ),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+                          const SizedBox(width: 8),
+                          Text(deleteTitles[currentLang] ?? 'Delete Scan?',
+                              style: TextStyle(color: _cream, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      content: Text(
+                        deleteMsg[currentLang] ?? 'Remove this scan from your history?',
+                        style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13, height: 1.5),
+                      ),
+                      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(currentLang == 'si' ? 'අවලංගු කරන්න' : currentLang == 'ta' ? 'ரத்துசெய்' : 'Cancel',
+                              style: TextStyle(color: _cream.withOpacity(0.5), fontSize: 13)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent.withOpacity(0.85),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: Text(currentLang == 'si' ? 'මකා දමන්න' : currentLang == 'ta' ? 'நீக்கு' : 'Delete',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await DatabaseService.instance.deletePestScan(id);
+                    await _loadScansFromDb();
+                  }
+                },
+                child: Container(
+                  width: 90,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          imageFile,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey.withOpacity(0.2),
+                            child: const Icon(Icons.broken_image, color: Colors.white38),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0, right: 0, bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                              ),
+                            ),
+                            child: Text(
+                              pest.replaceAll('_', ' '),
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildTreatmentCard(Map<String, dynamic> t) {
@@ -639,109 +837,3 @@ class BoxPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
-
-// MOCK DATABASE FOR CASHEW PESTS
-const Map<String, dynamic> _pestDatabase = {
-  'Thrips': {
-    'scientific_name': 'Scirtothrips dorsalis',
-    'severity': 'medium',
-    'description': 'Minute insects that scrape and suck sap from leaves and floral parts, leading to stunted shoots and scarred nuts.',
-    'symptoms': [
-      'Scab marks on the surface of cashew nuts',
-      'Corky, brownish discoloration on apples',
-      'Leaves becoming pale and curled'
-    ],
-    'treatments': [
-      {
-        'name': 'Neem formulation',
-        'type': 'organic',
-        'eco_friendly': true,
-        'description': 'Spray NSKE (Neem Seed Kernel Extract) 5% during flowering.',
-        'timing': 'Flowering/Fruiting stage'
-      },
-      {
-        'name': 'Profenofos',
-        'type': 'chemical',
-        'eco_friendly': false,
-        'description': 'Spray Profenofos 50 EC (1 ml/litre) if severe.',
-        'timing': 'When scabs become highly visible'
-      }
-    ],
-    'prevention': [
-      {
-         'measure': 'Monitor Flushing',
-         'description': 'Frequent scouting of flushing to catch the population build-up early.'
-      }
-    ]
-  },
-  'mites': {
-    'scientific_name': 'Tetranychidae',
-    'severity': 'medium',
-    'description': 'Spider mites that feed on plant sap, commonly found on the underside of cashew leaves causing speckling and webbing.',
-    'symptoms': [
-      'Tiny yellowish or white speckles on leaves',
-      'Fine webbing on the underside of leaves',
-      'Bronze or silvery appearance of damaged leaves',
-      'Leaf dropping in severe cases'
-    ],
-    'treatments': [
-       {
-        'name': 'Predatory Mites',
-        'type': 'biological',
-        'eco_friendly': true,
-        'description': 'Release Phytoseiulus persimilis or other predatory mites.',
-        'timing': 'Early signs of damage'
-      },
-      {
-        'name': 'Wettable Sulphur',
-        'type': 'chemical',
-        'eco_friendly': false,
-        'description': 'Spray wettable sulphur (3g/litre).',
-        'timing': 'During dry spells when mite populations peak',
-        'frequency': 'Every 10-15 days'
-      }
-    ],
-    'prevention': [
-       {
-         'measure': 'Adequate Irrigation',
-         'description': 'Water stress combined with warm weather encourages mite outbreaks.'
-       }
-    ]
-  },
-  'stem_borer': {
-    'scientific_name': 'Plocaederus ferrugineus',
-    'severity': 'high',
-    'description': 'A lethal pest causing the death of the entire cashew tree. The grubs bore into the bark and sapwood of the main stem and roots.',
-    'symptoms': [
-      'Yellowing of leaves followed by drying of twigs',
-      'Presence of small holes in the collar region',
-      'Extrusion of frass (powdery material) mixed with gum',
-      'Yellowing and shedding of leaves leading to death'
-    ],
-    'treatments': [
-      {
-        'name': 'Mechanical Extraction',
-        'type': 'mechanical',
-        'eco_friendly': true,
-        'description': 'Chisel out the bark of the tunneled portion and mechanically kill the grub.',
-        'timing': 'Early stages of infestation'
-      },
-      {
-        'name': 'Chlorpyriphos Swabbing',
-        'type': 'chemical',
-        'eco_friendly': false,
-        'description': 'Swab the main stem up to 1 meter height and exposed roots with Chlorpyriphos 20 EC (10ml/litre).',
-        'timing': 'After mechanical extraction',
-        'frequency': 'Once/Twice a year'
-      }
-    ],
-    'prevention': [
-      {
-        'measure': 'Phyto-sanitation',
-        'description': 'Remove and burn dead and severely infested trees to prevent the spread to adjacent trees.',
-        'frequency': 'Immediate'
-      }
-    ],
-    'additional_info': 'Check the collar region of trees frequently during summer months when adult beetles emerge and lay eggs.'
-  }
-};

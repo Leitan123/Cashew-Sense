@@ -282,9 +282,9 @@ class _BleSoilScreenState extends State<BleSoilScreen>
           indicatorColor: _lime,
           labelColor: _lime,
           unselectedLabelColor: _cream.withOpacity(0.5),
-          tabs: const [
-            Tab(icon: Icon(Icons.sensors), text: 'Soil Sensor'),
-            Tab(icon: Icon(Icons.bluetooth_searching), text: 'Nearby Devices'),
+          tabs: [
+            Tab(icon: const Icon(Icons.sensors), text: 'Soil Sensor'.tr(context)),
+            Tab(icon: const Icon(Icons.bluetooth_searching), text: 'Nearby Devices'.tr(context)),
           ],
         ),
       ),
@@ -340,8 +340,8 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             const SizedBox(height: 20),
             Text(
               _isScanningSoil
-                  ? 'Searching for Soil Sensor BLE...'
-                  : 'Soil Sensor Not Connected',
+                  ? 'Searching for Soil Sensor BLE...'.tr(context)
+                  : 'Soil Sensor Not Connected'.tr(context),
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -349,7 +349,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Scan to find your ESP32 soil sensor\nand tap Connect to pair it',
+              'Scan to find your ESP32 soil sensor\nand tap Connect to pair it'.tr(context),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: _cream.withOpacity(0.45)),
             ),
@@ -374,7 +374,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                             color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.bluetooth_searching, color: Colors.white),
                 label: Text(
-                  _isScanningSoil ? 'Scanning...' : 'Scan for Soil Sensor',
+                  _isScanningSoil ? 'Scanning...' : 'Scan for Soil Sensor'.tr(context),
                   style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -392,7 +392,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'FOUND DEVICES',
+                  'FOUND DEVICES'.tr(context),
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
@@ -453,7 +453,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text('Connect'.tr(context), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -477,7 +477,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                     Row(children: [
                       Icon(Icons.tips_and_updates, size: 16, color: _lime),
                       const SizedBox(width: 6),
-                      Text('Before connecting',
+                      Text('Before connecting'.tr(context),
                           style: TextStyle(fontWeight: FontWeight.bold, color: _lime)),
                     ]),
                     const SizedBox(height: 8),
@@ -510,9 +510,9 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                 child: ElevatedButton.icon(
                   onPressed: _goToFertilizerAdvisor,
                   icon: const Icon(Icons.agriculture, color: Colors.white),
-                  label: const Text(
-                    'Get Fertilizer Advice',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  label: Text(
+                    'Get Fertilizer Advice'.tr(context),
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -702,7 +702,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
           Icon(Icons.info_outline, size: 18, color: _lime.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(_statusMessage,
+            child: Text(_statusMessage.tr(context),
                 style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.7))),
           ),
         ],
@@ -724,13 +724,13 @@ class _BleSoilScreenState extends State<BleSoilScreen>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Connected: ${_device?.platformName ?? ''}',
+              '${'Connected: '.tr(context)}${_device?.platformName ?? ''}',
               style: TextStyle(color: _lime, fontWeight: FontWeight.bold),
             ),
           ),
           Icon(Icons.circle, color: _lime, size: 10),
           const SizedBox(width: 4),
-          Text('Live', style: TextStyle(color: _lime, fontSize: 12)),
+          Text('Live'.tr(context), style: TextStyle(color: _lime, fontSize: 12)),
         ],
       ),
     );
