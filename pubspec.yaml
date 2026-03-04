@@ -17,6 +17,8 @@ dependencies:
   #flutter_blue: ^0.8.0
   flutter_blue_plus: ^1.36.8
   permission_handler: ^11.3.1
+  sqflite: ^2.3.3
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:

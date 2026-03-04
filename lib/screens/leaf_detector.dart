@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import '/widgets/common_widgets.dart';
+import '/services/database_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -24,13 +25,27 @@ class _LeafDetectorState extends State<LeafDetector> {
   File? _image;
   String _result = '';
   final List<String> classNames = ['Anthracnose', 'Healthy', 'Leaf_Miner', 'Red_Rust'];
-  final List<File> _recentScans = [];
+  // Each entry: { 'id': int, 'imagePath': String, 'diseaseName': String, 'timestamp': int }
+  List<Map<String, dynamic>> _recentScans = [];
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _initDb();
     _loadModel();
+  }
+
+  Future<void> _initDb() async {
+    await DatabaseService.instance.init();
+    await _loadScansFromDb();
+  }
+
+  Future<void> _loadScansFromDb() async {
+    final rows = await DatabaseService.instance.getScans(limit: 20);
+    setState(() {
+      _recentScans = rows;
+    });
   }
 
   Future<void> _loadModel() async {
@@ -56,7 +71,6 @@ class _LeafDetectorState extends State<LeafDetector> {
         _result = '';
       });
       _runModel(File(pickedFile.path));
-      _recentScans.insert(0, File(pickedFile.path));
     }
   }
 
@@ -89,10 +103,19 @@ class _LeafDetectorState extends State<LeafDetector> {
       output[0].reduce((a, b) => a > b ? a : b),
     );
 
+    final resultLabel =
+        '${classNames[maxIndex]} (${(output[0][maxIndex] * 100).toStringAsFixed(2)}%)';
+    final diseaseName = classNames[maxIndex];
+
+    // Persist to SQLite
+    await DatabaseService.instance.insertScan(imageFile.path, diseaseName);
+
     setState(() {
-      _result =
-          '${classNames[maxIndex]} (${(output[0][maxIndex] * 100).toStringAsFixed(2)}%)';
+      _result = resultLabel;
     });
+
+    // Reload list from DB so Recent Scans is always consistent with the database
+    await _loadScansFromDb();
   }
 
   void _onNavTapped(int index) {
@@ -512,7 +535,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 110,
+                    height: 130,
                     child: _recentScans.isEmpty
                         ? Center(
                             child: Text('No recent scans yet.',
@@ -522,18 +545,75 @@ class _LeafDetectorState extends State<LeafDetector> {
                             scrollDirection: Axis.horizontal,
                             itemCount: _recentScans.length,
                             itemBuilder: (context, index) {
-                              return Container(
-                                margin: const EdgeInsets.only(right: 10),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: _lime.withOpacity(0.25)),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Image.file(
-                                    _recentScans[index],
-                                    width: 90,
-                                    fit: BoxFit.cover,
+                              final scan = _recentScans[index];
+                              final imageFile = File(scan['imagePath'] as String);
+                              final disease = scan['diseaseName'] as String;
+                              final isHealthy = disease.toLowerCase() == 'healthy';
+                              return GestureDetector(
+                                onLongPress: () async {
+                                  // Long-press to delete
+                                  final id = scan['id'] as int;
+                                  await DatabaseService.instance.deleteScan(id);
+                                  await _loadScansFromDb();
+                                },
+                                child: Container(
+                                  width: 100,
+                                  margin: const EdgeInsets.only(right: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isHealthy
+                                          ? _lime.withOpacity(0.4)
+                                          : Colors.redAccent.withOpacity(0.4),
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.file(
+                                          imageFile,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            color: Colors.grey.withOpacity(0.2),
+                                            child: const Icon(Icons.broken_image,
+                                                color: Colors.white38),
+                                          ),
+                                        ),
+                                        // Disease name label at the bottom
+                                        Positioned(
+                                          left: 0,
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4, horizontal: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.black.withOpacity(0.75),
+                                                ],
+                                              ),
+                                            ),
+                                            child: Text(
+                                              disease.replaceAll('_', ' '),
+                                              style: TextStyle(
+                                                color: isHealthy ? _lime : Colors.redAccent,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
