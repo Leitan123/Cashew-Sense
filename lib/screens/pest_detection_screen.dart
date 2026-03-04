@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/yolo_service.dart';
-
+import '../widgets/common_widgets.dart';
+import '../services/localization_service.dart';
 class PestDetectionScreen extends StatefulWidget {
   const PestDetectionScreen({super.key});
 
@@ -104,12 +105,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 
     return Scaffold(
       backgroundColor: _charcoal,
-      appBar: AppBar(
-        title: const Text('Cashew Pest Detection', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: _moss,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
+      appBar: buildCashewAppBar(title: 'Pest Detection'.tr(context)),
       body: Stack(
         children: [
           // Background blurry glows

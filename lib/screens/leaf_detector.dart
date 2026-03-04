@@ -6,6 +6,10 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import '/widgets/common_widgets.dart';
 import '/services/database_service.dart';
+import '/data/disease_database.dart';
+import '/screens/scan_detail_screen.dart';
+import 'package:provider/provider.dart';
+import '/services/localization_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -133,7 +137,8 @@ class _LeafDetectorState extends State<LeafDetector> {
 
   Widget _buildDiseasePanel() {
     final disease = _detectedDisease;
-    final db = _diseaseDatabase[disease];
+    final currentLang = context.read<LocalizationService>().currentLanguage;
+    final db = localizedDiseaseDatabase[currentLang]?[disease];
     if (db == null) return const SizedBox.shrink();
 
     return Container(
@@ -322,9 +327,42 @@ class _LeafDetectorState extends State<LeafDetector> {
 
   @override
   Widget build(BuildContext context) {
+    final currentLang = context.watch<LocalizationService>().currentLanguage;
+
+    final titles = {
+      'en': 'Leaf Disease Detector',
+      'si': 'පත්‍ර රෝග හඳුනාගැනීම',
+      'ta': 'இலை நோய் கண்டறிதல்',
+    };
+    final recentScansText = {
+      'en': 'Recent Scans',
+      'si': 'මෑතකදී කළ පරීක්ෂණ',
+      'ta': 'சமீபத்திய ஸ்கேன்கள்',
+    };
+    final noScansText = {
+      'en': 'No recent scans found.',
+      'si': 'මෑතකදී කළ පරීක්ෂණ කිසිවක් හමු නොවීය.',
+      'ta': 'சமீபத்திய ஸ்கேன்கள் எதுவும் கிடைக்கவில்லை.',
+    };
+    final identifyText = {
+      'en': 'Identify Leaf Disease',
+      'si': 'පත්‍ර රෝග හඳුනාගන්න',
+      'ta': 'இலை நோயைக் கண்டறியவும்',
+    };
+    final takePhotoText = {
+      'en': 'Take Photo',
+      'si': 'ඡායාරූපයක් ගන්න',
+      'ta': 'படம் எடுக்கவும்',
+    };
+    final tapCameraText = {
+      'en': 'Tap the camera to analyse',
+      'si': 'විශ්ලේෂණය කිරීමට කැමරාව ඔබන්න',
+      'ta': 'பகுப்பாய்வு செய்ய கேமராவை தொடவும்',
+    };
+
     return Scaffold(
       backgroundColor: _charcoal,
-      appBar: buildCashewAppBar(title: 'CashewSense'),
+      appBar: buildCashewAppBar(title: titles[currentLang] ?? 'Leaf Disease Detector'),
       bottomNavigationBar: buildCashewBottomNav(
         currentIndex: _selectedIndex,
         onTap: _onNavTapped,
@@ -407,7 +445,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                Text('Identify Leaf Disease',
+                                Text(identifyText[currentLang] ?? 'Identify Leaf Disease',
                                     style: TextStyle(
                                       color: _cream,
                                       fontSize: 22,
@@ -415,7 +453,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                                       shadows: const [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black45)],
                                     )),
                                 const SizedBox(height: 4),
-                                Text('Tap the camera to analyse',
+                                Text(tapCameraText[currentLang] ?? 'Tap the camera to analyse',
                                     style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13)),
                               ],
                             ),
@@ -450,7 +488,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                   const SizedBox(height: 42),
 
                   // ── Label ────────────────────────────────────────────────
-                  Text('Take Photo',
+                  Text(takePhotoText[currentLang] ?? 'Take Photo',
                       style: TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w600, color: _cream.withOpacity(0.7), letterSpacing: 0.3)),
                   const SizedBox(height: 20),
@@ -520,7 +558,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                     child: Row(
                       children: [
                         Text(
-                          'RECENT SCANS',
+                          recentScansText[currentLang] ?? 'RECENT SCANS',
                           style: TextStyle(
                             color: _cream.withOpacity(0.35),
                             fontSize: 11,
@@ -538,7 +576,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                     height: 130,
                     child: _recentScans.isEmpty
                         ? Center(
-                            child: Text('No recent scans yet.',
+                            child: Text(noScansText[currentLang] ?? 'No recent scans yet.',
                                 style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 13)))
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -550,11 +588,85 @@ class _LeafDetectorState extends State<LeafDetector> {
                               final disease = scan['diseaseName'] as String;
                               final isHealthy = disease.toLowerCase() == 'healthy';
                               return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ScanDetailScreen(
+                                        imagePath: imageFile.path,
+                                        diseaseName: disease,
+                                      ),
+                                    ),
+                                  );
+                                },
                                 onLongPress: () async {
-                                  // Long-press to delete
                                   final id = scan['id'] as int;
-                                  await DatabaseService.instance.deleteScan(id);
-                                  await _loadScansFromDb();
+                                  
+                                  final deleteTitles = {
+                                    'en': 'Delete Scan?',
+                                    'si': 'පරීක්ෂණය මකා දමන්නද?',
+                                    'ta': 'ஸ்கேனை நீக்கவா?',
+                                  };
+                                  final deleteMsg = {
+                                    'en': 'Are you sure you want to remove this scan from your history?',
+                                    'si': 'ඔබට මෙම පරීක්ෂණය ඉතිහාසයෙන් ඉවත් කිරීමට අවශ්‍ය බව විශ්වාසද?',
+                                    'ta': 'யவரலாற்றிலிருந்து இந்த ஸ்கேனை அகற்ற விரும்புகிறீர்களா?',
+                                  };
+                                  final cancelText = {
+                                    'en': 'CANCEL',
+                                    'si': 'අවලංගු කරන්න',
+                                    'ta': 'ரத்துசெய்',
+                                  };
+                                  final deleteText = {
+                                    'en': 'DELETE',
+                                    'si': 'මකා දමන්න',
+                                    'ta': 'நீக்கு',
+                                  };
+
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      backgroundColor: const Color(0xFF1e2820),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                        side: BorderSide(color: _lime.withOpacity(0.18)),
+                                      ),
+                                      title: Row(
+                                        children: [
+                                          const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+                                          const SizedBox(width: 8),
+                                          Text(deleteTitles[currentLang] ?? 'Delete Scan?',
+                                              style: TextStyle(color: _cream, fontSize: 16, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        deleteMsg[currentLang] ?? 'Remove this ${disease.replaceAll("_", " ")} scan from your history?',
+                                        style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13, height: 1.5),
+                                      ),
+                                      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop(false),
+                                          child: Text(cancelText[currentLang] ?? 'Cancel',
+                                              style: TextStyle(color: _cream.withOpacity(0.5), fontSize: 13)),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.redAccent.withOpacity(0.85),
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                          ),
+                                          onPressed: () => Navigator.of(ctx).pop(true),
+                                          child: Text(deleteText[currentLang] ?? 'Delete', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true) {
+                                    await DatabaseService.instance.deleteScan(id);
+                                    await _loadScansFromDb();
+                                  }
                                 },
                                 child: Container(
                                   width: 100,
@@ -630,189 +742,4 @@ class _LeafDetectorState extends State<LeafDetector> {
     );
   }
 }
-
-// ── Disease Database ──────────────────────────────────────────────────────────
-const Map<String, dynamic> _diseaseDatabase = {
-  'Anthracnose': {
-    'common_name': 'Anthracnose',
-    'scientific_name': 'Colletotrichum gloeosporioides',
-    'severity': 'high',
-    'description':
-        'A widespread fungal disease affecting cashew leaves, flowers, and developing nuts. Severe during rainy seasons; spores spread rapidly via wind and rain splash.',
-    'symptoms': [
-      'Dark brown/black spots on leaves',
-      'Leaf tip drying and scorching',
-      'Flower blight — inflorescence turns brown and drops',
-      'Young nut drop before maturity',
-      'Dieback of shoots in severe cases',
-    ],
-    'treatments': [
-      {
-        'name': 'Field Sanitation',
-        'type': 'mechanical',
-        'description':
-            'Remove infected leaves, flowers, and fallen debris. Prune infected branches and burn or bury all infected material. Reduces fungal spore load significantly.',
-        'timing': 'Immediately upon detecting symptoms',
-      },
-      {
-        'name': 'Copper Oxychloride (0.3%)',
-        'type': 'chemical',
-        'description': 'Apply as preventive and curative spray on canopy. Highly effective at suppressing Colletotrichum.',
-        'timing': 'Before flowering, at flowering, after fruit set. Repeat every 15–20 days during heavy rain.',
-      },
-      {
-        'name': 'Bordeaux Mixture (1%)',
-        'type': 'chemical',
-        'description': 'A classic copper-lime based fungicide. Good protectant activity and helps prevent spread.',
-        'timing': 'Before and during rainy season',
-      },
-      {
-        'name': 'Carbendazim / Propiconazole / Mancozeb',
-        'type': 'chemical',
-        'description':
-            'Systemic fungicides (Carbendazim, Propiconazole) for curative effect. Mancozeb as a contact protectant. Rotate between different chemical groups to prevent resistance.',
-        'timing': 'Second and third spray in season',
-        'note': 'Rotate fungicides to prevent resistance build-up.',
-      },
-      {
-        'name': 'Trichoderma-based Biofungicide',
-        'type': 'biological',
-        'description': 'Apply Trichoderma viride or T. harzianum as soil drench or foliar spray for eco-friendly suppression.',
-        'timing': 'Before rainy season as a preventive measure',
-      },
-      {
-        'name': 'Neem Oil Spray (2%)',
-        'type': 'organic',
-        'description': 'Mild preventive spray. Best used as an early-stage or low-pressure treatment.',
-        'timing': 'Early signs / supplementary use',
-      },
-    ],
-    'prevention': [
-      {
-        'measure': 'Improve Air Circulation',
-        'description': 'Prune overcrowded canopy. Maintain proper spacing between trees to reduce leaf wetness duration.',
-        'frequency': 'Annually after harvest',
-      },
-      {
-        'measure': 'Balanced Nutrition',
-        'description':
-            'Avoid excessive nitrogen fertilizer — too much soft growth is more susceptible to infection. Apply proper NPK with micronutrients.',
-        'frequency': 'At each fertilization cycle',
-      },
-      {
-        'measure': 'Preventive Sprays Before Rainy Season',
-        'description': 'In humid climates with heavy monsoon rains, begin preventive copper sprays before the rains arrive.',
-        'frequency': 'Before each monsoon onset',
-      },
-    ],
-    'note':
-        'For research: Record disease severity index (0–5 scale) per tree along with rainfall data, tree age, canopy density, and fungicide history. This data can reveal disease-severity vs nut quality correlation and help identify disease-resistant trees.',
-  },
-  'Red_Rust': {
-    'common_name': 'Red Rust (Algal Leaf Spot)',
-    'scientific_name': 'Cephaleuros virescens',
-    'severity': 'medium',
-    'description':
-        'Caused by an algal pathogen (not a fungus). Orange-red velvety patches appear on older leaves and stems. Thrives in humid, shaded orchards with poor drainage. Common during Sri Lankan monsoon season.',
-    'symptoms': [
-      'Orange-red to rust-coloured velvety circular patches on leaves',
-      'Patches mostly appear on older leaves and on the upper surface',
-      'Can also affect bark/stems of young branches',
-      'Common in humid, dense, and poorly-drained orchards',
-    ],
-    'treatments': [
-      {
-        'name': 'Copper Oxychloride (0.3%)',
-        'type': 'chemical',
-        'description':
-            'Most effective treatment for algal leaf spot. Spray directly on affected leaves and branches.',
-        'timing': '2–3 sprays during early rainy season',
-      },
-      {
-        'name': 'Bordeaux Mixture (1%)',
-        'type': 'chemical',
-        'description': 'Copper-lime based spray. Effective as a preventive coat against algal spread.',
-        'timing': 'Before rainy season, repeat at 3-week intervals',
-      },
-    ],
-    'prevention': [
-      {
-        'measure': 'Pruning & Sunlight Management',
-        'description':
-            'Thin dense canopy to improve sunlight penetration. Red rust thrives in humid and shaded conditions. Remove crossing branches.',
-        'frequency': 'Annually, after harvest',
-      },
-      {
-        'measure': 'Improve Drainage',
-        'description': 'Ensure good soil drainage in the orchard. Avoid waterlogging at tree base.',
-      },
-      {
-        'measure': 'Balanced Nutrition',
-        'description':
-            'Apply proper NPK fertilizers. Include micronutrients especially Zinc and Magnesium. Healthy, well-nourished trees resist algal infection better.',
-        'frequency': 'Each fertilization cycle',
-      },
-      {
-        'measure': 'Preventive Spraying',
-        'description': 'In high-humidity climates, begin copper spray programme before the rainy season.',
-        'frequency': 'Before every monsoon',
-      },
-    ],
-    'note':
-        'Red rust is caused by algae, not fungi — so conventional fungicides are less effective. Copper-based products are the most reliable control option.',
-  },
-  'Leaf_Miner': {
-    'common_name': 'Leaf Miner',
-    'scientific_name': 'Acrocercops syngramma',
-    'severity': 'low',
-    'description':
-        'A minor pest primarily affecting young cashew leaves. Tiny caterpillars tunnel between the upper and lower surfaces of tender leaves, forming distinctive silvery blisters or serpentine trails.',
-    'symptoms': [
-      'Silvery or whitish blisters / mines on the upper surface of young leaves',
-      'Serpentine (winding) trails visible through leaf surface',
-      'Leaves may curl, distort, and dry up in severe cases',
-      'Mostly affects the first flush of new leaves',
-    ],
-    'treatments': [
-      {
-        'name': 'Natural Enemy Conservation',
-        'type': 'biological',
-        'description':
-            'Parasitic wasps (chalcid parasitoids) naturally feed on leaf miner larvae. Avoid broad-spectrum pesticides that kill these beneficial insects.',
-        'timing': 'Ongoing — encourage year-round',
-      },
-      {
-        'name': 'Neem Oil Spray (2%)',
-        'type': 'organic',
-        'description': 'Spray 2% neem oil (with soft soap as emulsifier) during flushing to deter egg-laying females.',
-        'timing': 'At first sign of new flushing',
-        'frequency': 'Every 10–15 days during flush period',
-      },
-      {
-        'name': 'Dimethoate (30 EC)',
-        'type': 'chemical',
-        'description':
-            'Spray Dimethoate 30 EC at 1.5 ml/litre only if the infestation exceeds the Economic Threshold Level. Avoid routine use to protect natural enemies.',
-        'timing': 'New flush period',
-        'note': 'Use only when infestation is severe; rotate with other chemistries.',
-      },
-    ],
-    'prevention': [
-      {
-        'measure': 'Monitor New Flushes',
-        'description':
-            'Inspect flushing regularly to detect early leaf miner activity before populations build up.',
-        'frequency': 'Weekly during flush periods',
-      },
-      {
-        'measure': 'Avoid Over-fertilising with Nitrogen',
-        'description':
-            'Excess nitrogen promotes rapid, soft flushes that are more attractive to leaf miner egg-laying. Use balanced NPK.',
-      },
-    ],
-    'note':
-        'Leaf miner is generally a minor pest and rarely causes significant economic damage. Heavy-handed chemical use often kills natural parasitoids and worsens long-term infestations.',
-  },
-};
-
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
+import 'services/localization_service.dart';
 
 // ── Global Theme Tokens ─────────────────────────────────────────────────────
 const _charcoal = Color(0xFF1e2820);
@@ -8,8 +10,17 @@ const _leaf     = Color(0xFF5c8a3c);
 const _lime     = Color(0xFFa8c96e);
 const _cream    = Color(0xFFf5f0e8);
 
-void main() {
-  runApp(const CashewSenseApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final localizationService = LocalizationService();
+  await localizationService.init();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: localizationService,
+      child: const CashewSenseApp(),
+    ),
+  );
 }
 
 class CashewSenseApp extends StatelessWidget {

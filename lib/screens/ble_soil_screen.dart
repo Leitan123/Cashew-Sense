@@ -5,6 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/soil_model_service.dart';
 import '../widgets/common_widgets.dart';
+import '../services/localization_service.dart';
 import 'fertilizer_screen.dart';
 
 const _charcoal = Color(0xFF1e2820);
@@ -272,7 +273,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
     return Scaffold(
       backgroundColor: _charcoal,
       appBar: AppBar(
-        title: const Text('NPK Soil Sensor'),
+        title: Text('Bluetooth Soil Sensor'.tr(context)),
         backgroundColor: _moss,
         foregroundColor: _cream,
         elevation: 0,

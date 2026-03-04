@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../services/soil_model_service.dart';
 import '../widgets/common_widgets.dart';
+import '../services/localization_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -84,7 +86,7 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _charcoal,
-      appBar: buildCashewAppBar(title: 'Soil Analysis'),
+      appBar: buildCashewAppBar(title: 'Soil Analysis'.tr(context)),
       body: Stack(
         children: [
           Positioned(

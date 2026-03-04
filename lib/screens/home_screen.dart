@@ -6,6 +6,7 @@ import 'pest_detection_screen.dart';
 import 'nut_classification_screen.dart';
 import 'ble_soil_screen.dart';
 import 'fertilizer_screen.dart';
+import '../services/localization_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -65,9 +66,9 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           Icon(Icons.circle, size: 7, color: _lime),
                           const SizedBox(width: 5),
-                          const Text(
-                            'AI POWERED',
-                            style: TextStyle(
+                          Text(
+                            'AI POWERED'.tr(context),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
@@ -79,20 +80,20 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Welcome to CashewSense',
-                      style: TextStyle(
+                      'Welcome to CashewSense'.tr(context),
+                      style: const TextStyle(
                         color: _cream,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.2,
-                        shadows: const [
+                        shadows: [
                           Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black45),
                         ],
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Your intelligent agriculture companion',
+                      'Your intelligent agriculture companion'.tr(context),
                       style: TextStyle(
                         color: _cream.withOpacity(0.75),
                         fontSize: 14,
@@ -109,7 +110,7 @@ class HomeScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    'FEATURES',
+                    'FEATURES'.tr(context),
                     style: TextStyle(
                       color: _cream.withOpacity(0.35),
                       fontSize: 11,
@@ -137,43 +138,43 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _buildFeatureCard(context,
                       icon: Icons.coronavirus_outlined,
-                      title: 'Disease\nDetection',
-                      subtitle: 'Leaf analysis',
+                      title: 'Disease\nDetection'.tr(context),
+                      subtitle: 'Leaf analysis'.tr(context),
                       iconColor: Colors.redAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const LeafDetector()))),
                   _buildFeatureCard(context,
                       icon: Icons.eco_outlined,
-                      title: 'Nut\nClassification',
-                      subtitle: 'Grade A/B/C',
+                      title: 'Nut\nClassification'.tr(context),
+                      subtitle: 'Grade A/B/C'.tr(context),
                       iconColor: _lime,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const NutClassificationScreen()))),
                   _buildFeatureCard(context,
                       icon: Icons.pest_control_outlined,
-                      title: 'Pest\nDetection',
-                      subtitle: 'YOLO AI model',
+                      title: 'Pest\nDetection'.tr(context),
+                      subtitle: 'YOLO AI model'.tr(context),
                       iconColor: Colors.orangeAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => PestDetectionScreen()))),
                   _buildFeatureCard(context,
                       icon: Icons.science_outlined,
-                      title: 'Soil\nAnalysis',
-                      subtitle: 'Health score',
+                      title: 'Soil\nAnalysis'.tr(context),
+                      subtitle: 'Health score'.tr(context),
                       iconColor: Colors.tealAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const SoilAnalysisScreen()))),
                   _buildFeatureCard(context,
                       icon: Icons.bluetooth_rounded,
-                      title: 'NPK Sensor\n(Bluetooth)',
-                      subtitle: 'Live BLE data',
+                      title: 'NPK Sensor\n(Bluetooth)'.tr(context),
+                      subtitle: 'Live BLE data'.tr(context),
                       iconColor: Colors.lightBlueAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const BleSoilScreen()))),
                   _buildFeatureCard(context,
                       icon: Icons.agriculture_rounded,
-                      title: 'Fertilizer\nAdvisor',
-                      subtitle: 'Smart NPK plan',
+                      title: 'Fertilizer\nAdvisor'.tr(context),
+                      subtitle: 'Smart NPK plan'.tr(context),
                       iconColor: Colors.amberAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const FertilizerScreen()))),

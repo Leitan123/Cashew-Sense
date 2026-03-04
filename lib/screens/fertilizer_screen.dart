@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/trunk_model_service.dart';
 import '../widgets/common_widgets.dart';
+import '../services/localization_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -417,7 +418,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: buildCashewAppBar(title: 'Fertilizer Advisor'),
+      appBar: buildCashewAppBar(title: 'Fertilizer Advisor'.tr(context)),
       backgroundColor: _charcoal,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

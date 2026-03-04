@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/yolo_service.dart';
+import '../widgets/common_widgets.dart';
+import '../services/localization_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -65,13 +67,13 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   Future<void> _submit() async {
     if (_selectedImage == null || _weightController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select image and enter weight')),
+        SnackBar(content: Text('Please select image and enter weight'.tr(context))),
       );
       return;
     }
     if (!_modelLoaded) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Model is not loaded yet')),
+        SnackBar(content: Text('Model is not loaded yet'.tr(context))),
       );
       return;
     }
@@ -106,10 +108,10 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
     String finalGradeOutcome = "";
     if (currentModelGrade == currentWeightGrade) {
       finalGradeOutcome = currentModelGrade;
-      finalDecision = "Model and weight agree";
+      finalDecision = "Model and weight agree".tr(context);
     } else {
       finalGradeOutcome = currentWeightGrade;
-      finalDecision = "Weight-based correction applied";
+      finalDecision = "Weight-based correction applied".tr(context);
     }
 
     setState(() {
@@ -143,13 +145,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _charcoal,
-      appBar: AppBar(
-        title: const Text('Cashew Nut Classification'),
-        backgroundColor: _moss,
-        foregroundColor: _cream,
-        elevation: 0,
-        iconTheme: IconThemeData(color: _cream),
-      ),
+      appBar: buildCashewAppBar(title: 'Nut Classification'.tr(context)),
       body: Stack(
         children: [
           // Background glow

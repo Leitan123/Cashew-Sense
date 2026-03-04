@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '/screens/settings_screen.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -32,9 +33,15 @@ PreferredSizeWidget buildCashewAppBar({
               icon: Icon(Icons.person_outline, color: _cream.withOpacity(0.8)),
               onPressed: () {},
             ),
-            IconButton(
-              icon: Icon(Icons.settings_outlined, color: _cream.withOpacity(0.8)),
-              onPressed: () {},
+            Builder(
+              builder: (context) => IconButton(
+                icon: Icon(Icons.settings_outlined, color: _cream.withOpacity(0.8)),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
             ),
           ]
         : null,
