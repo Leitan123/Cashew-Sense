@@ -4,6 +4,12 @@ import 'package:image_picker/image_picker.dart';
 import '../services/trunk_model_service.dart';
 import '../widgets/common_widgets.dart';
 
+const _charcoal = Color(0xFF1e2820);
+const _moss     = Color(0xFF3d5a2e);
+const _leaf     = Color(0xFF5c8a3c);
+const _lime     = Color(0xFFa8c96e);
+const _cream    = Color(0xFFf5f0e8);
+
 class FertilizerScreen extends StatefulWidget {
   final double? moisture;
   final double? temperature;
@@ -412,7 +418,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: buildCashewAppBar(title: 'Fertilizer Advisor'),
-      backgroundColor: const Color(0xFFF5F5DC),
+      backgroundColor: _charcoal,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -445,12 +451,19 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF2E3A20),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: _lime,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -460,16 +473,15 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: const Color(0xFF243020),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _lime.withOpacity(0.25)),
       ),
       child: Column(
         children: [
           if (_imageFile != null)
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
               child: Image.file(
                 _imageFile!,
                 height: 220,
@@ -481,31 +493,36 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
             Container(
               height: 160,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                color: const Color(0xFF1e2820),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
               ),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.photo_camera, size: 48, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('No image selected',
-                        style: TextStyle(color: Colors.grey)),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [_moss, _leaf]),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.photo_camera, size: 36, color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('No image selected', style: TextStyle(color: _cream.withOpacity(0.4))),
                   ],
                 ),
               ),
             ),
           if (_classifying)
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 12),
-                  Text('Classifying trunk size...'),
+                  CircularProgressIndicator(color: _lime, strokeWidth: 2),
+                  const SizedBox(width: 12),
+                  Text('Classifying trunk size...', style: TextStyle(color: _cream.withOpacity(0.7))),
                 ],
               ),
             ),
@@ -514,30 +531,40 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt, color: Colors.white),
-                    label: const Text('Camera',
-                        style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E3A20),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [_moss, _leaf]),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _pickImage(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt, color: Colors.white),
+                      label: const Text('Camera', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library,
-                        color: Colors.white),
-                    label: const Text('Gallery',
-                        style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.brown,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3a2a20),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _lime.withOpacity(0.3)),
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _pickImage(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library, color: Colors.white),
+                      label: const Text('Gallery', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ),
@@ -556,10 +583,10 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     final index      = _trunkResult!['classIndex'] as int;
 
     final colors = [
-      Colors.blue,
-      Colors.orange,
-      Colors.green,
-      Colors.purple
+      Colors.lightBlueAccent,
+      Colors.orangeAccent,
+      _lime,
+      Colors.purpleAccent,
     ];
     final icons = [
       Icons.crop_square,
@@ -575,9 +602,9 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     ];
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: colors[index].withOpacity(0.1),
+        color: const Color(0xFF243020),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors[index].withOpacity(0.4)),
       ),
@@ -586,7 +613,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colors[index].withOpacity(0.2),
+              color: colors[index].withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icons[index], color: colors[index], size: 32),
@@ -597,18 +624,12 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Trunk Size: $label',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: colors[index])),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors[index])),
                 Text('Confidence: $confidence%',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: colors[index].withOpacity(0.8))),
+                    style: TextStyle(fontSize: 13, color: colors[index].withOpacity(0.8))),
                 const SizedBox(height: 4),
                 Text(descs[index],
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade700)),
+                    style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.5))),
               ],
             ),
           ),
@@ -621,56 +642,45 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   Widget _buildNpkInputs() {
     final fromBle = widget.nitrogen != null;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF243020),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _lime.withOpacity(0.2)),
       ),
       child: Column(
         children: [
           if (fromBle)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
+                color: _leaf.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _lime.withOpacity(0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.bluetooth_connected,
-                      color: Colors.green, size: 16),
-                  SizedBox(width: 6),
+                  Icon(Icons.bluetooth_connected, color: _lime, size: 16),
+                  const SizedBox(width: 6),
                   Text('Values auto-filled from BLE sensor',
-                      style:
-                          TextStyle(color: Colors.green, fontSize: 12)),
+                      style: TextStyle(color: _lime, fontSize: 12)),
                 ],
               ),
             ),
           Row(
             children: [
-              Expanded(
-                  child: _buildInput(
-                      'N (mg/kg)', _nCtrl, Colors.green)),
+              Expanded(child: _buildInput('N (mg/kg)', _nCtrl, Colors.green)),
               const SizedBox(width: 10),
-              Expanded(
-                  child: _buildInput(
-                      'P (mg/kg)', _pCtrl, Colors.amber.shade700)),
+              Expanded(child: _buildInput('P (mg/kg)', _pCtrl, Colors.amber.shade700)),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                  child: _buildInput(
-                      'K (mg/kg)', _kCtrl, Colors.red.shade400)),
+              Expanded(child: _buildInput('K (mg/kg)', _kCtrl, Colors.red.shade400)),
               const SizedBox(width: 10),
-              Expanded(
-                  child:
-                      _buildInput('pH', _phCtrl, Colors.teal)),
+              Expanded(child: _buildInput('pH', _phCtrl, Colors.teal)),
             ],
           ),
           const SizedBox(height: 10),
@@ -680,42 +690,38 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     );
   }
 
-  Widget _buildInput(
-      String label, TextEditingController ctrl, Color color) {
+  Widget _buildInput(String label, TextEditingController ctrl, Color color) {
     return TextField(
       controller: ctrl,
-      keyboardType:
-          const TextInputType.numberWithOptions(decimal: true),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: TextStyle(color: _cream),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: color, fontSize: 13),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: color, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12, vertical: 10),
       ),
     );
   }
 
   Widget _buildGenerateButton() {
-    return SizedBox(
+    return Container(
       width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [_moss, _leaf]),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: _leaf.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
       child: ElevatedButton.icon(
         onPressed: _generateRecommendation,
         icon: const Icon(Icons.auto_awesome, color: Colors.white),
         label: const Text(
           'Generate Fertilizer Recommendation',
-          style: TextStyle(color: Colors.white, fontSize: 15),
+          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E3A20),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );
@@ -725,69 +731,60 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   Widget _buildRecCard(_FertilizerRec rec) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFF243020),
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: rec.statusColor, width: 4)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05), blurRadius: 6)
+          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8)
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(rec.icon, color: rec.color, size: 22),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(rec.nutrient,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: rec.statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(rec.icon, color: rec.color, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(rec.nutrient,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _cream)),
                 ),
-                child: Text(rec.status,
-                    style: TextStyle(
-                        color: rec.statusColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: rec.statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: rec.statusColor.withOpacity(0.3)),
+                  ),
+                  child: Text(rec.status,
+                      style: TextStyle(color: rec.statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            Divider(height: 18, color: Colors.white.withOpacity(0.07)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: rec.statusColor.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: rec.statusColor.withOpacity(0.2)),
               ),
-            ],
-          ),
-          const Divider(height: 16),
-
-          // Farmer advice box
-          Container(
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(
-              color: rec.statusColor.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: rec.statusColor.withOpacity(0.3)),
+              child: Text(
+                rec.advice,
+                style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.8), height: 1.4),
+              ),
             ),
-            child: Text(
-              rec.advice,
-              style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                  height: 1.4),
-            ),
-          ),
-
-          _recRow(Icons.local_florist, 'Use', rec.fertilizer),
-          const SizedBox(height: 6),
-          _recRow(Icons.scale, 'Amount', rec.dose),
-          const SizedBox(height: 6),
-          _recRow(Icons.schedule, 'When', rec.timing),
-        ],
+            _recRow(Icons.local_florist, 'Use', rec.fertilizer),
+            const SizedBox(height: 6),
+            _recRow(Icons.scale, 'Amount', rec.dose),
+            const SizedBox(height: 6),
+            _recRow(Icons.schedule, 'When', rec.timing),
+          ],
+        ),
       ),
     );
   }
@@ -796,17 +793,12 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: Colors.grey.shade500),
+        Icon(icon, size: 16, color: _lime.withOpacity(0.7)),
         const SizedBox(width: 6),
         Text('$label: ',
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700)),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _cream.withOpacity(0.5))),
         Expanded(
-          child: Text(value,
-              style: const TextStyle(
-                  fontSize: 13, color: Colors.black87)),
+          child: Text(value, style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.8))),
         ),
       ],
     );
@@ -814,22 +806,22 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
 
   Widget _buildSummaryNote() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
+        color: _moss.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _lime.withOpacity(0.2)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: Colors.amber, size: 20),
-          SizedBox(width: 8),
+          Icon(Icons.info_outline, color: _lime, size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'These recommendations are based on trunk size and soil sensor data. '
               'Always consult a local agronomist for region-specific advice.',
-              style: TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.6)),
             ),
           ),
         ],

@@ -7,6 +7,12 @@ import '../services/soil_model_service.dart';
 import '../widgets/common_widgets.dart';
 import 'fertilizer_screen.dart';
 
+const _charcoal = Color(0xFF1e2820);
+const _moss     = Color(0xFF3d5a2e);
+const _leaf     = Color(0xFF5c8a3c);
+const _lime     = Color(0xFFa8c96e);
+const _cream    = Color(0xFFf5f0e8);
+
 class BleSoilScreen extends StatefulWidget {
   const BleSoilScreen({super.key});
 
@@ -264,22 +270,23 @@ class _BleSoilScreenState extends State<BleSoilScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _charcoal,
       appBar: AppBar(
         title: const Text('NPK Soil Sensor'),
-        backgroundColor: const Color(0xFF2E3A20),
-        foregroundColor: Colors.white,
+        backgroundColor: _moss,
+        foregroundColor: _cream,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController!,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
+          indicatorColor: _lime,
+          labelColor: _lime,
+          unselectedLabelColor: _cream.withOpacity(0.5),
           tabs: const [
             Tab(icon: Icon(Icons.sensors), text: 'Soil Sensor'),
             Tab(icon: Icon(Icons.bluetooth_searching), text: 'Nearby Devices'),
           ],
         ),
       ),
-      backgroundColor: const Color(0xFFF5F5DC),
       body: TabBarView(
         controller: _tabController!,
         children: [
@@ -296,6 +303,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
+      // ── dark bg set at Scaffold ──
       child: Column(
         children: [
           _buildStatusBar(),
@@ -310,12 +318,13 @@ class _BleSoilScreenState extends State<BleSoilScreen>
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  gradient: LinearGradient(colors: [_moss, _leaf]),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20)
+                        color: _lime.withOpacity(0.25),
+                        blurRadius: 28,
+                        spreadRadius: 2)
                   ],
                 ),
                 child: Icon(
@@ -323,7 +332,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                       ? Icons.bluetooth_searching
                       : Icons.bluetooth,
                   size: 64,
-                  color: const Color(0xFF2E3A20),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -332,22 +341,28 @@ class _BleSoilScreenState extends State<BleSoilScreen>
               _isScanningSoil
                   ? 'Searching for Soil Sensor BLE...'
                   : 'Soil Sensor Not Connected',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3A20)),
+                  color: _cream),
             ),
             const SizedBox(height: 8),
             Text(
               'Scan to find your ESP32 soil sensor\nand tap Connect to pair it',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 14, color: _cream.withOpacity(0.45)),
             ),
             const SizedBox(height: 24),
 
             // Scan button
-            SizedBox(
+            Container(
               width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: _isScanningSoil ? null : LinearGradient(colors: [_moss, _leaf]),
+                color: _isScanningSoil ? Colors.white12 : null,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: _isScanningSoil ? [] : [BoxShadow(color: _leaf.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4))],
+              ),
               child: ElevatedButton.icon(
                 onPressed: _isScanningSoil ? null : _startSoilScan,
                 icon: _isScanningSoil
@@ -356,22 +371,16 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                         height: 18,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
-                    : const Icon(Icons.bluetooth_searching,
-                        color: Colors.white),
+                    : const Icon(Icons.bluetooth_searching, color: Colors.white),
                 label: Text(
                   _isScanningSoil ? 'Scanning...' : 'Scan for Soil Sensor',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isScanningSoil
-                      ? Colors.grey
-                      : const Color(0xFF2E3A20),
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
@@ -382,83 +391,70 @@ class _BleSoilScreenState extends State<BleSoilScreen>
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Found Devices',
+                  'FOUND DEVICES',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.grey.shade700),
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      color: _cream.withOpacity(0.35)),
                 ),
               ),
               const SizedBox(height: 8),
               ...(_foundSensors.map((result) {
                 final rssi = result.rssi;
                 final signalColor = rssi >= -60
-                    ? Colors.green
+                    ? _lime
                     : rssi >= -80
-                        ? Colors.orange
-                        : Colors.red;
-                return Card(
+                        ? Colors.orangeAccent
+                        : Colors.redAccent;
+                return Container(
                   margin: const EdgeInsets.only(bottom: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.green.shade200)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor:
-                              const Color(0xFF2E3A20).withOpacity(0.1),
-                          child: const Icon(Icons.sensors,
-                              color: Color(0xFF2E3A20)),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF243020),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _lime.withOpacity(0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: _leaf.withOpacity(0.2),
+                        child: Icon(Icons.sensors, color: _lime),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              result.device.platformName.isNotEmpty
+                                  ? result.device.platformName
+                                  : 'Unknown Device',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _cream),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${result.device.remoteId}',
+                              style: TextStyle(fontSize: 11, color: _cream.withOpacity(0.4)),
+                            ),
+                            Row(children: [
+                              Icon(Icons.signal_cellular_alt, size: 13, color: signalColor),
+                              const SizedBox(width: 3),
+                              Text('$rssi dBm', style: TextStyle(fontSize: 11, color: signalColor)),
+                            ]),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                result.device.platformName.isNotEmpty
-                                    ? result.device.platformName
-                                    : 'Unknown Device',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${result.device.remoteId}',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade500),
-                              ),
-                              Row(children: [
-                                Icon(Icons.signal_cellular_alt,
-                                    size: 13, color: signalColor),
-                                const SizedBox(width: 3),
-                                Text('$rssi dBm',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: signalColor)),
-                              ]),
-                            ],
-                          ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => _connectToDevice(result.device),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _leaf,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        ElevatedButton(
-                          onPressed: () =>
-                              _connectToDevice(result.device),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade700,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('Connect',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
+                        child: const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
                 );
               })),
@@ -468,23 +464,20 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             if (_foundSensors.isEmpty) ...[
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade200),
+                  color: _moss.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _lime.withOpacity(0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Icon(Icons.tips_and_updates,
-                          size: 16, color: Colors.amber.shade700),
+                      Icon(Icons.tips_and_updates, size: 16, color: _lime),
                       const SizedBox(width: 6),
                       Text('Before connecting',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade700)),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: _lime)),
                     ]),
                     const SizedBox(height: 8),
                     _buildTip('Make sure ESP32 sensor is powered on'),
@@ -506,23 +499,25 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             if (_soilScore != null) _buildScoreCard(),
             const SizedBox(height: 16),
             if (nitrogen != null)
-              SizedBox(
+              Container(
                 width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [_moss, _leaf]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: _leaf.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4))],
+                ),
                 child: ElevatedButton.icon(
                   onPressed: _goToFertilizerAdvisor,
                   icon: const Icon(Icons.agriculture, color: Colors.white),
                   label: const Text(
                     'Get Fertilizer Advice',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -540,15 +535,14 @@ class _BleSoilScreenState extends State<BleSoilScreen>
       children: [
         Container(
           width: double.infinity,
-          color: _isScanning ? Colors.blue.shade50 : Colors.grey.shade100,
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          color: _charcoal,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           child: Text(
             _isScanning
                 ? '🔍 Scanning for all nearby devices...'
                 : '✅ Found ${_allDevices.length} device(s)',
             style: TextStyle(
-              color:
-                  _isScanning ? Colors.blue.shade700 : Colors.grey.shade700,
+              color: _isScanning ? _lime : _cream.withOpacity(0.55),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -560,30 +554,22 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const CircularProgressIndicator(
-                                color: Color(0xFF2E3A20)),
+                            CircularProgressIndicator(color: _lime),
                             const SizedBox(height: 16),
-                            Text('Looking for nearby devices...',
-                                style:
-                                    TextStyle(color: Colors.grey.shade600)),
+                            Text('Looking for nearby devices...', style: TextStyle(color: _cream.withOpacity(0.5))),
                           ],
                         )
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.bluetooth_disabled,
-                                size: 64, color: Colors.grey.shade400),
+                            Icon(Icons.bluetooth_disabled, size: 64, color: _cream.withOpacity(0.15)),
                             const SizedBox(height: 16),
-                            Text('No devices found',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey.shade600)),
+                            Text('No devices found', style: TextStyle(fontSize: 18, color: _cream.withOpacity(0.4))),
                             const SizedBox(height: 8),
                             Text(
                               'Tap "Scan All" to discover\nnearby Bluetooth devices',
                               textAlign: TextAlign.center,
-                              style:
-                                  TextStyle(color: Colors.grey.shade500),
+                              style: TextStyle(color: _cream.withOpacity(0.3)),
                             ),
                           ],
                         ),
@@ -596,51 +582,43 @@ class _BleSoilScreenState extends State<BleSoilScreen>
                         ? result.device.platformName
                         : 'Unknown Device';
                     final rssi = result.rssi;
-                    final signalColor = rssi >= -60
-                        ? Colors.green
-                        : rssi >= -80
-                            ? Colors.orange
-                            : Colors.red;
-                    final signalLabel = rssi >= -60
-                        ? 'Strong'
-                        : rssi >= -80
-                            ? 'Medium'
-                            : 'Weak';
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              const Color(0xFF2E3A20).withOpacity(0.1),
-                          child: const Icon(Icons.bluetooth,
-                              color: Color(0xFF2E3A20)),
-                        ),
-                        title: Text(name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('ID: ${result.device.remoteId}',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600)),
-                            Row(children: [
-                              Icon(Icons.signal_cellular_alt,
-                                  size: 14, color: signalColor),
-                              const SizedBox(width: 4),
-                              Text('$rssi dBm ($signalLabel)',
-                                  style: TextStyle(
-                                      fontSize: 11, color: signalColor)),
-                            ]),
-                          ],
-                        ),
-                        trailing: result.device.platformName.isNotEmpty
-                            ? const Icon(Icons.circle,
-                                color: Colors.green, size: 10)
-                            : const Icon(Icons.circle,
-                                color: Colors.grey, size: 10),
+                    final signalColor = rssi >= -60 ? _lime : rssi >= -80 ? Colors.orangeAccent : Colors.redAccent;
+                    final signalLabel = rssi >= -60 ? 'Strong' : rssi >= -80 ? 'Medium' : 'Weak';
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF243020),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _lime.withOpacity(0.15)),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: _leaf.withOpacity(0.2),
+                            child: Icon(Icons.bluetooth, color: _lime),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: TextStyle(fontWeight: FontWeight.bold, color: _cream, fontSize: 14)),
+                                Text('ID: ${result.device.remoteId}', style: TextStyle(fontSize: 10, color: _cream.withOpacity(0.35))),
+                                Row(children: [
+                                  Icon(Icons.signal_cellular_alt, size: 12, color: signalColor),
+                                  const SizedBox(width: 4),
+                                  Text('$rssi dBm ($signalLabel)', style: TextStyle(fontSize: 10, color: signalColor)),
+                                ]),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.circle,
+                            color: result.device.platformName.isNotEmpty ? _lime : _cream.withOpacity(0.2),
+                            size: 10,
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -648,25 +626,28 @@ class _BleSoilScreenState extends State<BleSoilScreen>
         ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: SizedBox(
+          child: Container(
             width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: _isScanning ? null : LinearGradient(colors: [_moss, _leaf]),
+              color: _isScanning ? Colors.white12 : null,
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: ElevatedButton.icon(
               onPressed: _isScanning ? null : _scanAllDevices,
               icon: Icon(
-                  _isScanning
-                      ? Icons.hourglass_top
-                      : Icons.bluetooth_searching,
-                  color: Colors.white),
+                _isScanning ? Icons.hourglass_top : Icons.bluetooth_searching,
+                color: Colors.white,
+              ),
               label: Text(
                 _isScanning ? 'Scanning...' : 'Scan All Nearby Devices',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _isScanning ? Colors.grey : const Color(0xFF2E3A20),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -681,13 +662,10 @@ class _BleSoilScreenState extends State<BleSoilScreen>
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline,
-              size: 14, color: Colors.amber.shade700),
+          Icon(Icons.check_circle_outline, size: 14, color: _lime),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(text,
-                style: TextStyle(
-                    fontSize: 12, color: Colors.amber.shade800)),
+            child: Text(text, style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.6))),
           ),
         ],
       ),
@@ -699,10 +677,10 @@ class _BleSoilScreenState extends State<BleSoilScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: Color(0xFF2E3A20)),
+          CircularProgressIndicator(color: _lime),
           const SizedBox(height: 20),
           Text(_statusMessage,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: _cream.withOpacity(0.7)),
               textAlign: TextAlign.center),
         ],
       ),
@@ -712,20 +690,20 @@ class _BleSoilScreenState extends State<BleSoilScreen>
   Widget _buildStatusBar() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        color: const Color(0xFF243020),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _lime.withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 18, color: Colors.grey),
+          Icon(Icons.info_outline, size: 18, color: _lime.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
-              child: Text(_statusMessage,
-                  style: const TextStyle(
-                      fontSize: 13, color: Colors.black87))),
+            child: Text(_statusMessage,
+                style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.7))),
+          ),
         ],
       ),
     );
@@ -733,27 +711,25 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
   Widget _buildConnectedBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.green.shade300),
+        color: _leaf.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _lime.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.bluetooth_connected, color: Colors.green),
+          Icon(Icons.bluetooth_connected, color: _lime),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Connected: ${_device?.platformName ?? ''}',
-              style: const TextStyle(
-                  color: Colors.green, fontWeight: FontWeight.bold),
+              style: TextStyle(color: _lime, fontWeight: FontWeight.bold),
             ),
           ),
-          const Icon(Icons.circle, color: Colors.green, size: 10),
+          Icon(Icons.circle, color: _lime, size: 10),
           const SizedBox(width: 4),
-          const Text('Live',
-              style: TextStyle(color: Colors.green, fontSize: 12)),
+          Text('Live', style: TextStyle(color: _lime, fontSize: 12)),
         ],
       ),
     );
@@ -795,11 +771,11 @@ class _BleSoilScreenState extends State<BleSoilScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF243020),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _lime.withOpacity(0.12)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05), blurRadius: 6)
+          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8)
         ],
       ),
       child: Column(
@@ -811,10 +787,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             const SizedBox(width: 6),
             Flexible(
               child: Text(item.label,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.5), fontWeight: FontWeight.w500),
                   overflow: TextOverflow.ellipsis),
             ),
           ]),
@@ -822,17 +795,12 @@ class _BleSoilScreenState extends State<BleSoilScreen>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(item.value,
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: item.color)),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: item.color)),
               const SizedBox(width: 3),
               if (item.unit.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(item.unit,
-                      style: TextStyle(
-                          fontSize: 10, color: Colors.grey.shade500)),
+                  child: Text(item.unit, style: TextStyle(fontSize: 10, color: _cream.withOpacity(0.35))),
                 ),
             ],
           ),
@@ -843,50 +811,34 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
   Widget _buildScoreCard() {
     final score = _soilScore!;
-    final color = score >= 75
-        ? Colors.green
-        : score >= 50
-            ? Colors.orange
-            : Colors.red;
-    final label =
-        score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Poor';
+    final color = score >= 75 ? _lime : score >= 50 ? Colors.orangeAccent : Colors.redAccent;
+    final label = score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Poor';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [
-          color.withOpacity(0.15),
-          color.withOpacity(0.05)
-        ]),
+        color: const Color(0xFF243020),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(children: [
-        Text('Soil Health Score',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700)),
-        const SizedBox(height: 8),
-        Text(score.toStringAsFixed(1),
-            style: TextStyle(
-                fontSize: 52,
-                fontWeight: FontWeight.bold,
-                color: color)),
-        const SizedBox(height: 4),
+        Text('SOIL HEALTH SCORE',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.8, color: _cream.withOpacity(0.35))),
+        const SizedBox(height: 10),
+        Text(
+          score.toStringAsFixed(1),
+          style: TextStyle(fontSize: 52, fontWeight: FontWeight.bold, color: color),
+        ),
+        const SizedBox(height: 6),
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
           decoration: BoxDecoration(
             color: color.withOpacity(0.15),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.3)),
           ),
-          child: Text(label,
-              style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
+          child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
         ),
       ]),
     );
@@ -897,14 +849,13 @@ class _BleSoilScreenState extends State<BleSoilScreen>
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: _disconnect,
-        icon: const Icon(Icons.bluetooth_disabled, color: Colors.red),
+        icon: const Icon(Icons.bluetooth_disabled, color: Colors.redAccent),
         label: const Text('Disconnect',
-            style: TextStyle(color: Colors.red, fontSize: 15)),
+            style: TextStyle(color: Colors.redAccent, fontSize: 15, fontWeight: FontWeight.bold)),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.red),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          side: const BorderSide(color: Colors.redAccent, width: 1.5),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );

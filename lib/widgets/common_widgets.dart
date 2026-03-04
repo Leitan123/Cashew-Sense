@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+const _charcoal = Color(0xFF1e2820);
+const _moss     = Color(0xFF3d5a2e);
+const _lime     = Color(0xFFa8c96e);
+const _cream    = Color(0xFFf5f0e8);
+
 /// 🌿 Reusable App Bar for CashewSense
 PreferredSizeWidget buildCashewAppBar({
   required String title,
   bool showActions = true,
 }) {
   return AppBar(
-    backgroundColor: const Color(0xFF2E3A20),
+    backgroundColor: _moss,
     elevation: 0,
     leading: Padding(
       padding: const EdgeInsets.all(8.0),
@@ -15,19 +20,20 @@ PreferredSizeWidget buildCashewAppBar({
     title: Text(
       title,
       style: const TextStyle(
-        color: Colors.white,
+        color: _cream,
         fontSize: 18,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.4,
       ),
     ),
     actions: showActions
         ? [
             IconButton(
-              icon: const Icon(Icons.person_outline, color: Colors.white),
+              icon: Icon(Icons.person_outline, color: _cream.withOpacity(0.8)),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              icon: Icon(Icons.settings_outlined, color: _cream.withOpacity(0.8)),
               onPressed: () {},
             ),
           ]
@@ -41,15 +47,16 @@ Widget buildCashewBottomNav({
   required Function(int) onTap,
 }) {
   return BottomNavigationBar(
-    backgroundColor: const Color(0xFF2E3A20),
-    selectedItemColor: Colors.white,
-    unselectedItemColor: Colors.white60,
+    backgroundColor: _charcoal,
+    selectedItemColor: _lime,
+    unselectedItemColor: _cream.withOpacity(0.45),
     type: BottomNavigationBarType.fixed,
     currentIndex: currentIndex,
+    selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
     items: const [
-      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-      BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
+      BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+      BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'History'),
+      BottomNavigationBarItem(icon: Icon(Icons.newspaper_rounded), label: 'News'),
     ],
     onTap: onTap,
   );
