@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
+import '../services/database_service.dart';
+import '../services/auth_service.dart';
+import '../services/sync_service.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -26,14 +30,31 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
+    _initApp();
+  }
+
+  Future<void> _initApp() async {
+    // Artificial delay to show splash animation nicely
+    await Future.delayed(const Duration(seconds: 3));
+    
+    // Initialize services
+    await DatabaseService.instance.init();
+    await AuthService.instance.init();
+    SyncService.instance.init();
+
+    if (mounted) {
+      if (AuthService.instance.isLoggedIn) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
       }
-    });
+    }
   }
 
   @override

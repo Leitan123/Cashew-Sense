@@ -10,6 +10,9 @@ import '/data/disease_database.dart';
 import '/screens/scan_detail_screen.dart';
 import 'package:provider/provider.dart';
 import '/services/localization_service.dart';
+import '/services/auth_service.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -46,7 +49,8 @@ class _LeafDetectorState extends State<LeafDetector> {
   }
 
   Future<void> _loadScansFromDb() async {
-    final rows = await DatabaseService.instance.getScans(limit: 20);
+    final userId = AuthService.instance.currentUserId ?? 0;
+    final rows = await DatabaseService.instance.getScans(userId, limit: 20);
     setState(() {
       _recentScans = rows;
     });
@@ -111,8 +115,20 @@ class _LeafDetectorState extends State<LeafDetector> {
         '${classNames[maxIndex]} (${(output[0][maxIndex] * 100).toStringAsFixed(2)}%)';
     final diseaseName = classNames[maxIndex];
 
+    // Save image permanently out of cache before inserting to db
+    final dbPath = await getDatabasesPath();
+    final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
+    if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
+    
+    final fileName = 'leaf_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final permanentImage = await imageFile.copy(p.join(imagesDir.path, fileName));
+
     // Persist to SQLite
-    await DatabaseService.instance.insertScan(imageFile.path, diseaseName);
+    final userId = AuthService.instance.currentUserId ?? 0;
+    await DatabaseService.instance.insertScan(userId, permanentImage.path, diseaseName);
+    
+    // Trigger a sync immediately
+    AuthService.instance.syncData();
 
     setState(() {
       _result = resultLabel;

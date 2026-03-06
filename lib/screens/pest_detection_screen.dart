@@ -7,6 +7,9 @@ import '../services/localization_service.dart';
 import 'package:provider/provider.dart';
 import '../data/pest_database.dart';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 import '../screens/pest_scan_detail_screen.dart';
 
 class PestDetectionScreen extends StatefulWidget {
@@ -45,7 +48,8 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
   }
 
   Future<void> _loadScansFromDb() async {
-    final rows = await DatabaseService.instance.getPestScans(limit: 20);
+    final userId = AuthService.instance.currentUserId ?? 0;
+    final rows = await DatabaseService.instance.getPestScans(userId, limit: 20);
     setState(() {
       _recentScans = rows;
     });
@@ -106,7 +110,21 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
       int topClassIdx = _getTopPredictionClassIndex();
       if (topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length) {
         String detectedLabel = _yoloService.classNames[topClassIdx];
-        await DatabaseService.instance.insertPestScan(_imageFile!.path, detectedLabel);
+        
+        // Save image permanently out of cache before inserting to db
+        final dbPath = await getDatabasesPath();
+        final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
+        if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
+        
+        final fileName = 'pest_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final permanentImage = await _imageFile!.copy(p.join(imagesDir.path, fileName));
+
+        final userId = AuthService.instance.currentUserId ?? 0;
+        await DatabaseService.instance.insertPestScan(userId, permanentImage.path, detectedLabel);
+        
+        // Trigger a sync immediately
+        AuthService.instance.syncData();
+        
         await _loadScansFromDb();
       }
     }

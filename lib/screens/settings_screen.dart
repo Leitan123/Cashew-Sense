@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/localization_service.dart';
+import '/services/auth_service.dart';
 import '/widgets/common_widgets.dart';
+import 'login_screen.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -20,11 +22,14 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: _charcoal,
       appBar: buildCashewAppBar(title: 'Settings', showActions: false),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildProfileSection(context),
+              const SizedBox(height: 32),
+              
               Text(
                 'Language / භාෂාව / மொழி',
                 style: TextStyle(
@@ -39,11 +44,117 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildLanguageOption(context, 'සිංහල (Sinhala)', 'si', currentLang),
               const SizedBox(height: 12),
-              _buildLanguageOption(context, 'தமிழ் (Tamil)', 'ta', currentLang),
+              const SizedBox(height: 32),
+              _buildLogoutButton(context),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileSection(BuildContext context) {
+    final userData = AuthService.instance.currentUserData;
+    if (userData == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF243020),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _lime.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _moss.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person, color: _lime, size: 32),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userData['name'] ?? 'User',
+                      style: const TextStyle(
+                        color: _cream,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      userData['phone'] ?? '',
+                      style: TextStyle(
+                        color: _lime.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 16),
+          _buildProfileRow(Icons.map_outlined, 'District', userData['district'] ?? ''),
+          const SizedBox(height: 12),
+          _buildProfileRow(Icons.landscape_outlined, 'Farm Size', '${userData['farm_size']} Acres'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: _lime.withOpacity(0.7), size: 18),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(color: _cream.withOpacity(0.7), fontSize: 13),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(color: _cream, fontSize: 13, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.redAccent.withOpacity(0.15),
+        foregroundColor: Colors.redAccent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.redAccent.withOpacity(0.5)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      icon: const Icon(Icons.logout),
+      label: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      onPressed: () async {
+        await AuthService.instance.logout();
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      },
     );
   }
 
