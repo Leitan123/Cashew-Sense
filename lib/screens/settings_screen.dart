@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/localization_service.dart';
 import '/services/auth_service.dart';
+import '/services/theme_service.dart';
+import '/theme/app_theme.dart';
 import '/widgets/common_widgets.dart';
 import 'login_screen.dart';
-
-const _charcoal = Color(0xFF1e2820);
-const _moss     = Color(0xFF3d5a2e);
-const _leaf     = Color(0xFF5c8a3c);
-const _lime     = Color(0xFFa8c96e);
-const _cream    = Color(0xFFf5f0e8);
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -17,9 +13,11 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentLang = context.watch<LocalizationService>().currentLanguage;
+    final isDark = context.watch<ThemeService>().isDark;
+    final c = context.ac;
 
     return Scaffold(
-      backgroundColor: _charcoal,
+      backgroundColor: c.charcoal,
       appBar: buildCashewAppBar(title: 'Settings', showActions: false),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -27,25 +25,42 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildProfileSection(context),
+              _buildProfileSection(context, c),
               const SizedBox(height: 32),
-              
+
+              // ── Appearance ──────────────────────────────────────────────────
               Text(
-                'Language / භාෂාව / மொழி',
+                'Appearance / පෙනුම / தோற்றம்',
                 style: TextStyle(
-                  color: _cream.withOpacity(0.8),
+                  color: c.cream.withOpacity(0.8),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(height: 16),
-              _buildLanguageOption(context, 'English', 'en', currentLang),
-              const SizedBox(height: 12),
-              _buildLanguageOption(context, 'සිංහල (Sinhala)', 'si', currentLang),
-              const SizedBox(height: 12),
+              _buildThemeToggle(context, isDark, c),
               const SizedBox(height: 32),
-              _buildLogoutButton(context),
+
+              // ── Language ────────────────────────────────────────────────────
+              Text(
+                'Language / භාෂාව / மொழி',
+                style: TextStyle(
+                  color: c.cream.withOpacity(0.8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildLanguageOption(context, 'English',            'en', currentLang, c),
+              const SizedBox(height: 12),
+              _buildLanguageOption(context, 'සිංහල (Sinhala)',   'si', currentLang, c),
+              const SizedBox(height: 12),
+              _buildLanguageOption(context, 'தமிழ் (Tamil)',     'ta', currentLang, c),
+              const SizedBox(height: 32),
+
+              _buildLogoutButton(context, c),
             ],
           ),
         ),
@@ -53,16 +68,91 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileSection(BuildContext context) {
+  Widget _buildThemeToggle(BuildContext context, bool isDark, AppColors c) {
+    return GestureDetector(
+      onTap: () => context.read<ThemeService>().setDark(!isDark),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: c.moss,
+          border: Border.all(color: c.lime.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              color: c.lime,
+              size: 26,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isDark ? 'Dark Mode' : 'Light Mode',
+                    style: TextStyle(color: c.cream, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isDark ? 'Tap to switch to Light Mode' : 'Tap to switch to Dark Mode',
+                    style: TextStyle(color: c.cream.withOpacity(0.5), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            // Pill toggle
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 52,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isDark ? c.lime.withOpacity(0.8) : c.cream.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: c.lime.withOpacity(0.4)),
+              ),
+              child: Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    left: isDark ? 26 : 2,
+                    top: 2,
+                    child: Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: isDark ? c.charcoal : c.leaf,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)],
+                      ),
+                      child: Icon(
+                        isDark ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+                        size: 14,
+                        color: isDark ? c.lime : Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSection(BuildContext context, AppColors c) {
     final userData = AuthService.instance.currentUserData;
     if (userData == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF243020),
+        color: c.moss,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _lime.withOpacity(0.18)),
+        border: Border.all(color: c.lime.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,10 +162,10 @@ class SettingsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _moss.withOpacity(0.5),
+                  color: c.leaf.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person, color: _lime, size: 32),
+                child: Icon(Icons.person, color: c.lime, size: 32),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -84,19 +174,12 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Text(
                       userData['name'] ?? 'User',
-                      style: const TextStyle(
-                        color: _cream,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: c.cream, fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       userData['phone'] ?? '',
-                      style: TextStyle(
-                        color: _lime.withOpacity(0.8),
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: c.lime.withOpacity(0.8), fontSize: 14),
                     ),
                   ],
                 ),
@@ -104,38 +187,32 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const Divider(color: Colors.white12),
+          Divider(color: c.cream.withOpacity(0.1)),
           const SizedBox(height: 16),
-          _buildProfileRow(Icons.map_outlined, 'District', userData['district'] ?? ''),
+          _buildProfileRow(Icons.map_outlined,       'District',   userData['district']  ?? '', c),
           const SizedBox(height: 12),
-          _buildProfileRow(Icons.landscape_outlined, 'Farm Size', '${userData['farm_size']} Acres'),
+          _buildProfileRow(Icons.landscape_outlined, 'Farm Size',  '${userData['farm_size']} Acres', c),
         ],
       ),
     );
   }
 
-  Widget _buildProfileRow(IconData icon, String label, String value) {
+  Widget _buildProfileRow(IconData icon, String label, String value, AppColors c) {
     return Row(
       children: [
-        Icon(icon, color: _lime.withOpacity(0.7), size: 18),
+        Icon(icon, color: c.lime.withOpacity(0.7), size: 18),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: TextStyle(color: _cream.withOpacity(0.7), fontSize: 13),
-        ),
+        Text(label, style: TextStyle(color: c.cream.withOpacity(0.7), fontSize: 13)),
         const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(color: _cream, fontSize: 13, fontWeight: FontWeight.bold),
-        ),
+        Text(value, style: TextStyle(color: c.cream, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context) {
+  Widget _buildLogoutButton(BuildContext context, AppColors c) {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.redAccent.withOpacity(0.15),
+        backgroundColor: Colors.redAccent.withOpacity(0.12),
         foregroundColor: Colors.redAccent,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -158,14 +235,13 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageOption(BuildContext context, String label, String langCode, String currentLang) {
+  Widget _buildLanguageOption(
+    BuildContext context, String label, String langCode, String currentLang, AppColors c) {
     final isSelected = langCode == currentLang;
 
     return GestureDetector(
       onTap: () {
         context.read<LocalizationService>().changeLanguage(langCode);
-        
-        // Show a popup confirm message
         final messages = {
           'en': 'Language changed to English',
           'si': 'භාෂාව සිංහලට වෙනස් කරන ලදි',
@@ -175,7 +251,7 @@ class SettingsScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(messages[langCode] ?? 'Language changed'),
-            backgroundColor: _leaf,
+            backgroundColor: c.leaf,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -184,9 +260,9 @@ class SettingsScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? _leaf.withOpacity(0.15) : Colors.white.withOpacity(0.02),
+          color: isSelected ? c.leaf.withOpacity(0.13) : c.moss,
           border: Border.all(
-            color: isSelected ? _lime.withOpacity(0.5) : Colors.white.withOpacity(0.05),
+            color: isSelected ? c.lime.withOpacity(0.5) : c.lime.withOpacity(0.12),
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -198,19 +274,25 @@ class SettingsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? _lime : Colors.white.withOpacity(0.3),
+                  color: isSelected ? c.lime : c.cream.withOpacity(0.3),
                   width: 2,
                 ),
               ),
               child: isSelected
-                  ? Center(child: Container(width: 12, height: 12, decoration: const BoxDecoration(shape: BoxShape.circle, color: _lime)))
+                  ? Center(
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: c.lime),
+                      ),
+                    )
                   : null,
             ),
             const SizedBox(width: 16),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? _lime : _cream,
+                color: isSelected ? c.lime : c.cream,
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),

@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/localization_service.dart';
+import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-
-const _charcoal = Color(0xFF1e2820);
-const _moss     = Color(0xFF3d5a2e);
-const _leaf     = Color(0xFF5c8a3c);
-const _lime     = Color(0xFFa8c96e);
-const _cream    = Color(0xFFf5f0e8);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -62,8 +57,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.ac;
     return Scaffold(
-      backgroundColor: _charcoal,
+      backgroundColor: c.charcoal,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -74,13 +70,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.agriculture_rounded, size: 80, color: _lime),
+                  Icon(Icons.agriculture_rounded, size: 80, color: c.lime),
                   const SizedBox(height: 16),
                   Text(
                     'Welcome Back'.tr(context),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _cream,
+                    style: TextStyle(
+                      color: c.cream,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
@@ -90,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Login to continue'.tr(context),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _cream.withOpacity(0.7),
+                      color: c.cream.withOpacity(0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -99,11 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: _cream),
+                    style: TextStyle(color: c.cream),
                     maxLength: 10,
                     decoration: InputDecoration(
                       labelText: 'Phone Number'.tr(context),
-                      prefixIcon: const Icon(Icons.phone_android, color: _lime),
+                      prefixIcon: Icon(Icons.phone_android, color: c.lime),
                       counterText: '',
                     ),
                     validator: (val) {
@@ -119,16 +115,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _pinController,
                     keyboardType: TextInputType.number,
                     obscureText: _obscurePin,
-                    style: const TextStyle(color: _cream),
+                    style: TextStyle(color: c.cream),
                     maxLength: 6,
                     decoration: InputDecoration(
                       labelText: 'PIN'.tr(context),
-                      prefixIcon: const Icon(Icons.lock_outline, color: _lime),
+                      prefixIcon: Icon(Icons.lock_outline, color: c.lime),
                       counterText: '',
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          color: _lime,
+                          color: c.lime,
                         ),
                         onPressed: () {
                           setState(() {
@@ -148,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     child: _isLoading 
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: _cream, strokeWidth: 2))
+                        ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: c.cream, strokeWidth: 2))
                         : Text('Login'.tr(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 24),
@@ -158,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         "Don't have an account? ".tr(context),
-                        style: TextStyle(color: _cream.withOpacity(0.7)),
+                        style: TextStyle(color: c.cream.withOpacity(0.7)),
                       ),
                       TextButton(
                         onPressed: () {
@@ -169,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: Text(
                           'Register'.tr(context),
-                          style: const TextStyle(color: _lime, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: c.lime, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

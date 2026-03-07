@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 
 class AuthService {
@@ -78,42 +79,131 @@ class AuthService {
     }
   }
 
-  /// Login requires internet UNLESS the phone matches the last logged out phone
+  /// Login requires internet. Validates via API and syncs DB.
   Future<bool> login({required String phone, required String pin}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastLogOutPhone = prefs.getString(_lastLogOutPhoneKey);
-
-    bool isOfflineAllowed = (phone == lastLogOutPhone);
-
-    if (!isOfflineAllowed) {
-      // Must check internet connection
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult.contains(ConnectivityResult.none)) {
-        throw Exception('Internet connection required for new users to log in on this device.');
-      }
-    }
-
-    // Since we don't have a real cloud API yet, we verify against local DB for now.
-    // In the future: if (!isOfflineAllowed), we would make an API call to fetch user data and insert it locally.
-    final user = await DatabaseService.instance.getUserByPhone(phone);
-    
-    if (user == null) {
-      throw Exception('User not found. Check phone number.');
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      throw Exception('Internet connection is required to login.');
     }
 
     final pinHash = _hashPin(pin);
-    if (user['pin_hash'] != pinHash) {
-      throw Exception('Incorrect PIN.');
+    final String loginUrl = 'https://dimgrey-fly-458602.hostingersite.com/api/login';
+
+    final response = await http.post(
+      Uri.parse(loginUrl),
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: jsonEncode({
+        'phone': phone,
+        'pin_hash': pinHash,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Login failed. Please check credentials.');
     }
 
-    // Success
-    await _setLoggedIn(user['id'] as int);
-    await prefs.setString(_lastLogOutPhoneKey, phone); // They are now the last potential logout phone
-    
-    // Attempt to sync immediately if internet is present
+    final data = jsonDecode(response.body);
+    final user = data['user'];
+    final leafScans = data['leaf_scans'] as List;
+    final pestScans = data['pest_scans'] as List;
+    final soilScans = data['soil_scans'] as List? ?? [];
+
+    final db = DatabaseService.instance;
+
+    // 1. Insert or update user locally
+    Map<String, dynamic>? localUser = await db.getUserByPhone(phone);
+    int localUserId;
+    if (localUser != null) {
+      localUserId = localUser['id'];
+    } else {
+      localUserId = await db.insertUser({
+        'name': user['name'],
+        'phone': user['phone'],
+        'pin_hash': pinHash,
+        'district': user['district'],
+        'farm_size': user['farm_size'],
+        'synced': 1,
+      });
+    }
+
+    // Login local session
+    await _setLoggedIn(localUserId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastLogOutPhoneKey, phone);
+
+    // 2. Sync Scans from Cloud
+    await _downloadAndSaveScans(localUserId, leafScans, type: 'leaf');
+    await _downloadAndSaveScans(localUserId, pestScans, type: 'pest');
+    await _downloadAndSaveScans(localUserId, soilScans, type: 'soil');
+
+    // Sync any pending local data up to cloud just in case
     syncData();
-    
+
     return true;
+  }
+
+  Future<void> _downloadAndSaveScans(int userId, List scans, {String type = 'leaf'}) async {
+    final db = DatabaseService.instance;
+    final appDir = await getApplicationDocumentsDirectory();
+
+    for (var scan in scans) {
+      // Find matching timestamp
+      List<Map<String, dynamic>> existingScans;
+      if (type == 'leaf') {
+        existingScans = await db.getScans(userId, limit: 1000);
+      } else if (type == 'pest') {
+        existingScans = await db.getPestScans(userId, limit: 1000);
+      } else {
+        existingScans = await db.getSoilScans(userId, limit: 1000);
+      }
+
+      bool existsLocally = existingScans.any((s) => s['timestamp'] == scan['timestamp']);
+
+      if (!existsLocally) {
+        // Download Image
+        String localImagePath = '';
+        final remoteUrl = scan['imagePath'];
+        if (remoteUrl != null && remoteUrl.toString().startsWith('http')) {
+          try {
+            final imgResponse = await http.get(Uri.parse(remoteUrl));
+            if (imgResponse.statusCode == 200) {
+              final fileName = '${type}_${scan['timestamp']}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              final file = File('${appDir.path}/$fileName');
+              await file.writeAsBytes(imgResponse.bodyBytes);
+              localImagePath = file.path;
+            }
+          } catch (e) {
+            print('Error downloading image: $e');
+            localImagePath = 'placeholder';
+          }
+        } else {
+           localImagePath = 'placeholder';
+        }
+
+        // Insert to DB
+        if (type == 'leaf') {
+          await db.insertScan(userId, localImagePath, scan['diseaseName']);
+        } else if (type == 'pest') {
+          await db.insertPestScan(userId, localImagePath, scan['pestName']);
+        } else {
+          await db.insertSoilScan({
+            'user_id': userId,
+            'imagePath': localImagePath,
+            'moisture': scan['moisture'],
+            'temperature': scan['temperature'],
+            'ec': scan['ec'],
+            'ph': scan['ph'],
+            'nitrogen': scan['nitrogen'],
+            'phosphorus': scan['phosphorus'],
+            'potassium': scan['potassium'],
+            'soil_score': scan['soil_score'],
+            'timestamp': scan['timestamp'],
+            'synced': 1,
+          });
+        }
+      }
+    }
   }
 
   Future<void> logout() async {
@@ -149,11 +239,6 @@ class AuthService {
 
       // 1. Get unsynced users
       final unsyncedUsersList = await db.getUnsyncedUsers();
-      
-      // We also need unsynced leaf and pest scans. Right now, our local schema doesn't have a 
-      // 'synced' column for scans, so we should either add one or just upload everything temporarily.
-      // To prevent duplicate uploads and bandwidth waste, we should ideally add 'synced' to scans too.
-      // Assuming we just send all for the currently logged in users for now (Laravel Handles duplicates via firstOrCreate).
 
       if (unsyncedUsersList.isEmpty && _currentUserId == null) {
          print("AuthService: Nothing to sync or no user logged in.");
@@ -169,11 +254,9 @@ class AuthService {
         final leafScans = await db.getScans(_currentUserId!, limit: 100);
         final pestScans = await db.getPestScans(_currentUserId!, limit: 100);
         
-        // Add phone number to scans so backend can link them to the right customer
         final userPhone = _currentUserData!['phone'];
         
-        // Helper to convert scans list to payload with base64
-        Future<List<Map<String, dynamic>>> prepareScansWithImages(List<Map<String, dynamic>> localScans) async {
+        Future<List<Map<String, dynamic>>> prepareScans(List<Map<String, dynamic>> localScans) async {
           List<Map<String, dynamic>> prepared = [];
           for (var scan in localScans) {
             String? base64Image;
@@ -184,7 +267,7 @@ class AuthService {
                 base64Image = base64Encode(bytes);
               }
             } catch (e) {
-              print("AuthService: Could not read image for scan: $e");
+              print("AuthService: Could not read image for scan");
             }
             
             prepared.add({
@@ -196,11 +279,53 @@ class AuthService {
           return prepared;
         }
 
-        payload['leaf_scans'] = await prepareScansWithImages(leafScans);
-        payload['pest_scans'] = await prepareScansWithImages(pestScans);
+        payload['leaf_scans'] = await prepareScans(leafScans);
+        payload['pest_scans'] = await prepareScans(pestScans);
       }
 
-      // Call API
+      // 4. Get unsynced soil scans
+      final unsyncedSoilScans = await db.getUnsyncedSoilScans();
+      final List<Map<String, dynamic>> soilScansPayload = [];
+      
+      for (var scan in unsyncedSoilScans) {
+        String base64Image = '';
+        if (scan['imagePath'] != 'placeholder') {
+          final file = File(scan['imagePath']);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            base64Image = base64Encode(bytes);
+          }
+        }
+        
+        // Ensure user is looked up correctly
+        final user = await db.getUserById(scan['user_id']);
+        if (user != null) {
+          soilScansPayload.add({
+            'user_phone': user['phone'],
+            'moisture': scan['moisture'],
+            'temperature': scan['temperature'],
+            'ec': scan['ec'],
+            'ph': scan['ph'],
+            'nitrogen': scan['nitrogen'],
+            'phosphorus': scan['phosphorus'],
+            'potassium': scan['potassium'],
+            'soil_score': scan['soil_score'],
+            'timestamp': scan['timestamp'],
+            'imageBase64': base64Image,
+          });
+        }
+      }
+
+      payload['soil_scans'] = soilScansPayload;
+
+      // Ensure we have something
+      if (unsyncedUsersList.isEmpty && (payload['leaf_scans'] == null || payload['leaf_scans'].isEmpty) && (payload['pest_scans'] == null || payload['pest_scans'].isEmpty) && soilScansPayload.isEmpty) {
+        print("AuthService: No new data to sync to cloud.");
+        return; // Nothing to sync
+      }
+
+      print("AuthService: Sending sync payload: ${jsonEncode(payload).substring(0, 100)}...");
+
       final response = await http.post(
         Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -208,17 +333,36 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        print("AuthService: Sync successful.");
-        // Mark users as synced locally
-        for (var user in unsyncedUsersList) {
-          await db.markUserSynced(user['id']);
+        // Mark as synced locally
+        for (var u in unsyncedUsersList) {
+          await db.markUserSynced(u['id']);
         }
+        // * In this architecture, scans are automatically marked synced when downloaded 
+        //   since we don't have a 'synced' column for leaf and pest scans.
+        //   However, for soil scans we added a `synced` flag.
+        for (var s in unsyncedSoilScans) {
+          await db.markSoilScanSynced(s['id']);
+        }
+        
+        print("AuthService: Background sync completed successfully.");
       } else {
         print("AuthService: Sync failed with status: ${response.statusCode}");
-        print("Response: ${response.body}");
       }
     } catch (e) {
-      print("AuthService: Sync error - $e");
+      print("AuthService: Sync error: $e");
     }
+  }
+
+  /// Starts listening to connectivity changes and syncs if internet is restored
+  void setupAutoSync() {
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (!results.contains(ConnectivityResult.none)) {
+        // Internet is available
+        if (isLoggedIn) {
+          print("Internet restored: Triggering auto-sync...");
+          syncData();
+        }
+      }
+    });
   }
 }

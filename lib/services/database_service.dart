@@ -14,7 +14,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE users (
@@ -45,6 +45,23 @@ class DatabaseService {
             timestamp INTEGER NOT NULL
           )
         ''');
+        await db.execute('''
+          CREATE TABLE soil_scans (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id   INTEGER NOT NULL,
+            imagePath TEXT    NOT NULL,
+            moisture  REAL,
+            temperature REAL,
+            ec        INTEGER,
+            ph        REAL,
+            nitrogen  INTEGER,
+            phosphorus INTEGER,
+            potassium INTEGER,
+            soil_score REAL,
+            timestamp INTEGER NOT NULL,
+            synced    INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -69,9 +86,27 @@ class DatabaseService {
               synced    INTEGER NOT NULL DEFAULT 0
             )
           ''');
-          // Add user_id to existing tables. For existing data, default to 0 (unassigned).
           await db.execute("ALTER TABLE scans ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0");
           await db.execute("ALTER TABLE pest_scans ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0");
+        }
+        if (oldVersion < 4) {
+          await db.execute('''
+            CREATE TABLE soil_scans (
+              id        INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id   INTEGER NOT NULL,
+              imagePath TEXT    NOT NULL,
+              moisture  REAL,
+              temperature REAL,
+              ec        INTEGER,
+              ph        REAL,
+              nitrogen  INTEGER,
+              phosphorus INTEGER,
+              potassium INTEGER,
+              soil_score REAL,
+              timestamp INTEGER NOT NULL,
+              synced    INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
         }
       },
     );
@@ -108,7 +143,6 @@ class DatabaseService {
 
   // ====== LEAF SCANS ======
 
-  /// Insert a new scan record. Returns the new row id.
   Future<int> insertScan(int userId, String imagePath, String diseaseName) async {
     return await _database.insert(
       'scans',
@@ -122,7 +156,6 @@ class DatabaseService {
     );
   }
 
-  /// Returns the [limit] most-recent scans for a user, newest first.
   Future<List<Map<String, dynamic>>> getScans(int userId, {int limit = 20}) async {
     return await _database.query(
       'scans',
@@ -133,14 +166,12 @@ class DatabaseService {
     );
   }
 
-  /// Delete a scan by its id.
   Future<void> deleteScan(int id) async {
     await _database.delete('scans', where: 'id = ?', whereArgs: [id]);
   }
 
   // ====== PEST SCANS ======
 
-  /// Insert a new pest scan record. Returns the new row id.
   Future<int> insertPestScan(int userId, String imagePath, String pestName) async {
     return await _database.insert(
       'pest_scans',
@@ -154,7 +185,6 @@ class DatabaseService {
     );
   }
 
-  /// Returns the [limit] most-recent pest scans for a user, newest first.
   Future<List<Map<String, dynamic>>> getPestScans(int userId, {int limit = 20}) async {
     return await _database.query(
       'pest_scans',
@@ -165,9 +195,40 @@ class DatabaseService {
     );
   }
 
-  /// Delete a pest scan by its id.
   Future<void> deletePestScan(int id) async {
     await _database.delete('pest_scans', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ====== SOIL SCANS ======
+
+  Future<int> insertSoilScan(Map<String, dynamic> scanData) async {
+    return await _database.insert(
+      'soil_scans',
+      scanData,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getSoilScans(int userId, {int limit = 20}) async {
+    return await _database.query(
+      'soil_scans',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedSoilScans() async {
+    return await _database.query('soil_scans', where: 'synced = 0');
+  }
+
+  Future<void> markSoilScanSynced(int id) async {
+    await _database.update('soil_scans', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteSoilScan(int id) async {
+    await _database.delete('soil_scans', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> close() async {
@@ -175,3 +236,4 @@ class DatabaseService {
     _db = null;
   }
 }
+

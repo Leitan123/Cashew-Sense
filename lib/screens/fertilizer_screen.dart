@@ -2,8 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/trunk_model_service.dart';
+import '../services/soil_model_service.dart';
+import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/common_widgets.dart';
 import '../services/localization_service.dart';
+import 'package:provider/provider.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -51,6 +55,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
 
   List<_FertilizerRec>? _recommendations;
   bool _modelReady = false;
+  List<Map<String, dynamic>> _recentScans = [];
 
   @override
   void initState() {
@@ -61,6 +66,19 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     _phCtrl       = TextEditingController(text: widget.ph?.toStringAsFixed(1)       ?? '');
     _moistureCtrl = TextEditingController(text: widget.moisture?.toStringAsFixed(1) ?? '');
     _loadModel();
+    _loadScansFromDb();
+  }
+
+  Future<void> _loadScansFromDb() async {
+    final userId = AuthService.instance.currentUserId;
+    if (userId != null) {
+      final rows = await DatabaseService.instance.getSoilScans(userId);
+      if (mounted) {
+        setState(() {
+          _recentScans = rows.take(15).toList(); // Show top 15 max on recent scans UI
+        });
+      }
+    }
   }
 
   Future<void> _loadModel() async {
@@ -414,6 +432,79 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
         .showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  Future<void> _saveScanWithImage() async {
+    final userId = AuthService.instance.currentUserId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please log in to save soil scans.'.tr(context))),
+      );
+      return;
+    }
+
+    if (_imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please capture an image first to save the scan.'.tr(context))),
+      );
+      return;
+    }
+
+    final imagePath = _imageFile!.path;
+
+    final n  = int.tryParse(_nCtrl.text)        ?? 0;
+    final p  = int.tryParse(_pCtrl.text)        ?? 0;
+    final k  = int.tryParse(_kCtrl.text)        ?? 0;
+    final ph = double.tryParse(_phCtrl.text)       ?? 7.0;
+    final m  = double.tryParse(_moistureCtrl.text) ?? 0.0;
+    
+    // We do not have EC and Temp fields in this screen for editing, so use passed or default
+    final ecVal = widget.ec ?? 0;
+    final tempVal = widget.temperature ?? 0.0;
+    
+    // Calculate a rough score from model
+    final SoilModelService soilModel = SoilModelService();
+    await soilModel.loadModel();
+    double? soilScore;
+    try {
+      soilScore = soilModel.predict(
+        f1: m, f2: tempVal, f3: ecVal.toDouble(),
+        ph: ph, f5: n.toDouble(), f6: p.toDouble(), f7: k.toDouble(),
+      );
+    } catch (_) {}
+    soilModel.close();
+
+    try {
+      await DatabaseService.instance.insertSoilScan({
+        'user_id': userId,
+        'imagePath': imagePath,
+        'moisture': m,
+        'temperature': tempVal,
+        'ec': ecVal,
+        'ph': ph,
+        'nitrogen': n,
+        'phosphorus': p,
+        'potassium': k,
+        'soil_score': soilScore,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'synced': 0, // Unsynced initially
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Soil scan saved successfully!'.tr(context))),
+      );
+
+      await _loadScansFromDb();
+
+      // Trigger sync
+      if (AuthService.instance.isLoggedIn) {
+        AuthService.instance.syncData();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save scan: $e')),
+      );
+    }
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -444,7 +535,31 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
               const SizedBox(height: 10),
               _buildSummaryNote(),
             ],
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Colors.blueGrey, Colors.blueAccent]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4))],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _saveScanWithImage,
+                icon: const Icon(Icons.cloud_upload, color: Colors.white),
+                label: Text(
+                  'Save with Image'.tr(context),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
             const SizedBox(height: 30),
+            _buildRecentScansSection(),
           ],
         ),
       ),
@@ -731,75 +846,101 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   // ── Recommendation card ───────────────────────────────────────────────────
   Widget _buildRecCard(_FertilizerRec rec) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF243020),
         borderRadius: BorderRadius.circular(16),
-        border: Border(left: BorderSide(color: rec.statusColor, width: 4)),
+        border: Border.all(color: _lime.withOpacity(0.12)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8)
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: rec.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(rec.icon, color: rec.color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rec.nutrient,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _cream),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      rec.status,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: rec.statusColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _buildInfoRow(Icons.science, 'Recommended Fertilizer:', rec.fertilizer, _lime),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.scale, 'Dose:', rec.dose, Colors.white70),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.schedule, 'Timing:', rec.timing, Colors.white70),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _charcoal,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(rec.icon, color: rec.color, size: 22),
+                Icon(Icons.tips_and_updates, size: 14, color: _lime),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(rec.nutrient,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _cream)),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: rec.statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: rec.statusColor.withOpacity(0.3)),
+                  child: Text(
+                    rec.advice,
+                    style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.8), height: 1.4),
                   ),
-                  child: Text(rec.status,
-                      style: TextStyle(color: rec.statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
-            Divider(height: 18, color: Colors.white.withOpacity(0.07)),
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 10),
-              decoration: BoxDecoration(
-                color: rec.statusColor.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: rec.statusColor.withOpacity(0.2)),
-              ),
-              child: Text(
-                rec.advice,
-                style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.8), height: 1.4),
-              ),
-            ),
-            _recRow(Icons.local_florist, 'Use'.tr(context), rec.fertilizer),
-            const SizedBox(height: 6),
-            _recRow(Icons.scale, 'Amount'.tr(context), rec.dose),
-            const SizedBox(height: 6),
-            _recRow(Icons.schedule, 'When'.tr(context), rec.timing),
-          ],
-        ),
+          )
+        ],
       ),
     );
   }
 
-  Widget _recRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value, Color valueColor) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: _lime.withOpacity(0.7)),
-        const SizedBox(width: 6),
-        Text('$label: ',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _cream.withOpacity(0.5))),
+        Icon(icon, size: 14, color: _cream.withOpacity(0.5)),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.5)),
+        ),
+        const SizedBox(width: 8),
         Expanded(
-          child: Text(value, style: TextStyle(fontSize: 13, color: _cream.withOpacity(0.8))),
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: valueColor, height: 1.2),
+          ),
         ),
       ],
     );
@@ -825,6 +966,189 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
               style: TextStyle(fontSize: 12, color: _cream.withOpacity(0.6)),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentScansSection() {
+    if (_recentScans.isEmpty) return const SizedBox.shrink();
+
+    final currentLang = Provider.of<LocalizationService>(context).currentLanguage;
+    final recentScansText = {
+      'en': 'RECENT SAVED SCANS',
+      'si': 'මෑතකදී සුරැකි පරීක්ෂණ',
+      'ta': 'சமீபத்திய சேமித்த ஸ்கேன்கள்',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              recentScansText[currentLang] ?? 'RECENT SAVED SCANS',
+              style: TextStyle(
+                color: _cream.withOpacity(0.35),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.07))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 130,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _recentScans.length,
+            itemBuilder: (context, index) {
+              final scan = _recentScans[index];
+              final imagePath = scan['imagePath'];
+              Widget imgWidget;
+              if (imagePath != null && imagePath != 'placeholder') {
+                final file = File(imagePath as String);
+                if (file.existsSync()) {
+                  imgWidget = Image.file(file, fit: BoxFit.cover);
+                } else {
+                  imgWidget = Container(color: Colors.grey.withOpacity(0.2), child: const Icon(Icons.broken_image, color: Colors.white38));
+                }
+              } else {
+                imgWidget = Container(color: Colors.grey.withOpacity(0.2), child: const Icon(Icons.broken_image, color: Colors.white38));
+              }
+
+              final score = scan['soil_score'] != null
+                  ? (scan['soil_score'] as double).toStringAsFixed(1)
+                  : '--';
+
+              return GestureDetector(
+                onTap: () => _showScanDetails(scan),
+                child: Container(
+                  width: 95,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _lime.withOpacity(0.4)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        imgWidget,
+                        Positioned(
+                          left: 0, right: 0, bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Score: $score',
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (scan['synced'] == 1)
+                                  Icon(Icons.cloud_done, color: _lime, size: 10)
+                                else
+                                  const Icon(Icons.cloud_upload_outlined, color: Colors.orange, size: 10)
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
+  void _showScanDetails(Map<String, dynamic> scan) {
+    final imagePath = scan['imagePath'];
+    Widget expandedImageWidget;
+    if (imagePath != null && imagePath != 'placeholder') {
+      final file = File(imagePath as String);
+      if (file.existsSync()) {
+        expandedImageWidget = ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(file, width: double.infinity, height: 200, fit: BoxFit.cover),
+        );
+      } else {
+        expandedImageWidget = Container(
+          width: double.infinity, height: 150,
+          decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.broken_image, color: Colors.white54, size: 48),
+        );
+      }
+    } else {
+      expandedImageWidget = Container(
+        width: double.infinity, height: 150,
+        decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.image_not_supported, color: Colors.white54, size: 48),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _charcoal,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Soil Parameters', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _lime)),
+                  const Divider(color: _moss),
+                  const SizedBox(height: 12),
+                  expandedImageWidget,
+                  const SizedBox(height: 20),
+                  _buildDetailRow('Moisture', '${scan['moisture'] ?? '--'} %'),
+                  _buildDetailRow('Temperature', '${scan['temperature'] ?? '--'} °C'),
+                  _buildDetailRow('EC', '${scan['ec'] ?? '--'} µS/cm'),
+                  _buildDetailRow('pH', '${scan['ph'] ?? '--'}'),
+                  _buildDetailRow('Nitrogen (N)', '${scan['nitrogen'] ?? '--'} mg/kg'),
+                  _buildDetailRow('Phosphorus (P)', '${scan['phosphorus'] ?? '--'} mg/kg'),
+                  _buildDetailRow('Potassium (K)', '${scan['potassium'] ?? '--'} mg/kg'),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: _cream.withOpacity(0.7))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: _cream)),
         ],
       ),
     );

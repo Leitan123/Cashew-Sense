@@ -7,6 +7,7 @@ import '../services/soil_model_service.dart';
 import '../widgets/common_widgets.dart';
 import '../services/localization_service.dart';
 import 'fertilizer_screen.dart';
+import 'soil_scan_history_screen.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -277,6 +278,18 @@ class _BleSoilScreenState extends State<BleSoilScreen>
         backgroundColor: _moss,
         foregroundColor: _cream,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SoilScanHistoryScreen()),
+              );
+            },
+            tooltip: 'View History',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController!,
           indicatorColor: _lime,

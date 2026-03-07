@@ -7,20 +7,16 @@ import 'nut_classification_screen.dart';
 import 'ble_soil_screen.dart';
 import 'fertilizer_screen.dart';
 import '../services/localization_service.dart';
-
-const _charcoal = Color(0xFF1e2820);
-const _moss     = Color(0xFF3d5a2e);
-const _leaf     = Color(0xFF5c8a3c);
-const _lime     = Color(0xFFa8c96e);
-const _cream    = Color(0xFFf5f0e8);
+import '../theme/app_theme.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.ac;
     return Scaffold(
-      backgroundColor: _charcoal,
+      backgroundColor: c.charcoal,
       appBar: buildCashewAppBar(title: 'CashewSense'),
       body: SingleChildScrollView(
         child: Column(
@@ -43,8 +39,8 @@ class HomeScreen extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      _moss.withOpacity(0.82),
-                      _charcoal.withOpacity(0.55),
+                      c.leaf.withOpacity(0.82),
+                      c.charcoal.withOpacity(0.55),
                     ],
                   ),
                 ),
@@ -57,14 +53,14 @@ class HomeScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withOpacity(0.15),
                         border: Border.all(color: Colors.white.withOpacity(0.2)),
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.circle, size: 7, color: _lime),
+                          Icon(Icons.circle, size: 7, color: c.lime),
                           const SizedBox(width: 5),
                           Text(
                             'AI POWERED'.tr(context),
@@ -81,12 +77,12 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       'Welcome to CashewSense'.tr(context),
-                      style: const TextStyle(
-                        color: _cream,
+                      style: TextStyle(
+                        color: c.moss,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.2,
-                        shadows: [
+                        shadows: const [
                           Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black45),
                         ],
                       ),
@@ -94,10 +90,7 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       'Your intelligent agriculture companion'.tr(context),
-                      style: TextStyle(
-                        color: _cream.withOpacity(0.75),
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
                     ),
                   ],
                 ),
@@ -112,14 +105,14 @@ class HomeScreen extends StatelessWidget {
                   Text(
                     'FEATURES'.tr(context),
                     style: TextStyle(
-                      color: _cream.withOpacity(0.35),
+                      color: c.cream.withOpacity(0.45),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.07))),
+                  Expanded(child: Container(height: 1, color: c.cream.withOpacity(0.08))),
                 ],
               ),
             ),
@@ -136,44 +129,35 @@ class HomeScreen extends StatelessWidget {
                 crossAxisSpacing: 14,
                 childAspectRatio: 1.05,
                 children: [
-                  _buildFeatureCard(context,
+                  _buildFeatureCard(context, c,
                       icon: Icons.coronavirus_outlined,
                       title: 'Disease\nDetection'.tr(context),
                       subtitle: 'Leaf analysis'.tr(context),
                       iconColor: Colors.redAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const LeafDetector()))),
-                  _buildFeatureCard(context,
+                  _buildFeatureCard(context, c,
                       icon: Icons.eco_outlined,
                       title: 'Nut\nClassification'.tr(context),
                       subtitle: 'Grade A/B/C'.tr(context),
-                      iconColor: _lime,
+                      iconColor: c.lime,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const NutClassificationScreen()))),
-                  _buildFeatureCard(context,
+                  _buildFeatureCard(context, c,
                       icon: Icons.pest_control_outlined,
                       title: 'Pest\nDetection'.tr(context),
                       subtitle: 'YOLO AI model'.tr(context),
                       iconColor: Colors.orangeAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => PestDetectionScreen()))),
-                  /*
-                  _buildFeatureCard(context,
-                      icon: Icons.science_outlined,
-                      title: 'Soil\nAnalysis'.tr(context),
-                      subtitle: 'Health score'.tr(context),
-                      iconColor: Colors.tealAccent,
-                      onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const SoilAnalysisScreen()))),
-                  */
-                  _buildFeatureCard(context,
+                  _buildFeatureCard(context, c,
                       icon: Icons.bluetooth_rounded,
                       title: 'NPK Sensor\n(Bluetooth)'.tr(context),
                       subtitle: 'Live BLE data'.tr(context),
                       iconColor: Colors.lightBlueAccent,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const BleSoilScreen()))),
-                  _buildFeatureCard(context,
+                  _buildFeatureCard(context, c,
                       icon: Icons.agriculture_rounded,
                       title: 'Fertilizer\nAdvisor'.tr(context),
                       subtitle: 'Smart NPK plan'.tr(context),
@@ -195,7 +179,8 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildFeatureCard(
-    BuildContext context, {
+    BuildContext context,
+    AppColors c, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -206,12 +191,12 @@ class HomeScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF243020),
+          color: c.moss,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _lime.withOpacity(0.18)),
+          border: Border.all(color: c.lime.withOpacity(0.18)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -224,14 +209,14 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_moss, _leaf],
+                  colors: [c.leaf, c.lime],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: _leaf.withOpacity(0.35),
+                    color: c.leaf.withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -246,7 +231,7 @@ class HomeScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: _cream,
+                color: c.cream,
                 height: 1.3,
                 letterSpacing: 0.2,
               ),
@@ -254,10 +239,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: _lime.withOpacity(0.7),
-              ),
+              style: TextStyle(fontSize: 11, color: c.lime.withOpacity(0.7)),
             ),
           ],
         ),
