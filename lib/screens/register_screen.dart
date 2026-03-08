@@ -24,11 +24,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _farmSizeController = TextEditingController();
+  final _employeeCodeController = TextEditingController();
   
   String? _selectedDistrict;
   bool _obscurePin = true;
   bool _obscureConfirmPin = true;
   bool _isLoading = false;
+  bool _isEmployee = false;
 
   final List<String> _districts = [
     'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo', 'Galle',
@@ -56,6 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         pin: _pinController.text.trim(),
         district: _selectedDistrict!,
         farmSize: size,
+        employeeCode: _isEmployee ? _employeeCodeController.text.trim() : null,
       );
       
       if (mounted) {
@@ -86,6 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _pinController.dispose();
     _confirmPinController.dispose();
     _farmSizeController.dispose();
+    _employeeCodeController.dispose();
     super.dispose();
   }
 
@@ -183,6 +187,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
+
+                // Employee Toggle
+                SwitchListTile(
+                  title: Text('Are you an employee?'.tr(context), style: const TextStyle(color: _cream)),
+                  subtitle: Text('Register using a farm owner code'.tr(context), style: TextStyle(color: _cream.withOpacity(0.7))),
+                  value: _isEmployee,
+                  activeColor: _lime,
+                  onChanged: (val) => setState(() => _isEmployee = val),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_isEmployee) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _employeeCodeController,
+                    style: const TextStyle(color: _cream),
+                    decoration: InputDecoration(
+                      labelText: 'Employee Code'.tr(context),
+                      prefixIcon: const Icon(Icons.badge_outlined, color: _lime),
+                    ),
+                    validator: (val) {
+                      if (_isEmployee && (val == null || val.trim().isEmpty)) {
+                        return 'Required'.tr(context);
+                      }
+                      return null;
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // PIN

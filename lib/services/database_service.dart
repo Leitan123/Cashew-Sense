@@ -14,7 +14,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE users (
@@ -24,7 +24,8 @@ class DatabaseService {
             pin_hash  TEXT    NOT NULL,
             district  TEXT    NOT NULL,
             farm_size REAL    NOT NULL,
-            synced    INTEGER NOT NULL DEFAULT 0
+            synced    INTEGER NOT NULL DEFAULT 0,
+            employee_code TEXT
           )
         ''');
         await db.execute('''
@@ -107,6 +108,9 @@ class DatabaseService {
               synced    INTEGER NOT NULL DEFAULT 0
             )
           ''');
+        }
+        if (oldVersion < 5) {
+          await db.execute("ALTER TABLE users ADD COLUMN employee_code TEXT");
         }
       },
     );

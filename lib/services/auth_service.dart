@@ -39,15 +39,35 @@ class AuthService {
     return sha256.convert(bytes).toString();
   }
 
-  /// Register works completely offline
+  /// Register works offline normally, but requires internet if employeeCode is provided
   Future<bool> register({
     required String name,
     required String phone,
     required String pin,
     required String district,
     required double farmSize,
+    String? employeeCode,
   }) async {
     try {
+      if (employeeCode != null && employeeCode.trim().isNotEmpty) {
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult.contains(ConnectivityResult.none)) {
+          throw Exception('Internet connection is required to register with an Employee Code.');
+        }
+
+        final String verifyUrl = 'https://dimgrey-fly-458602.hostingersite.com/api/verify-employee-code';
+        final verifyRes = await http.post(
+          Uri.parse(verifyUrl),
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: jsonEncode({'employee_code': employeeCode.trim()}),
+        );
+
+        if (verifyRes.statusCode != 200) {
+          final body = jsonDecode(verifyRes.body);
+          throw Exception(body['error'] ?? 'Invalid Employee Code.');
+        }
+      }
+
       // Check if phone already exists
       final existingUser = await DatabaseService.instance.getUserByPhone(phone);
       if (existingUser != null) {
@@ -62,6 +82,7 @@ class AuthService {
         'pin_hash': pinHash,
         'district': district,
         'farm_size': farmSize,
+        'employee_code': employeeCode?.trim(),
         'synced': 0,
       };
 
@@ -123,6 +144,7 @@ class AuthService {
         'pin_hash': pinHash,
         'district': user['district'],
         'farm_size': user['farm_size'],
+        'employee_code': user['employee_code'],
         'synced': 1,
       });
     }
@@ -238,7 +260,13 @@ class AuthService {
       final db = DatabaseService.instance;
 
       // 1. Get unsynced users
-      final unsyncedUsersList = await db.getUnsyncedUsers();
+      final rawUnsyncedUsersList = await db.getUnsyncedUsers();
+
+      // Make sure we carry over the employee_code because db returns what's exactly in the schema
+      final unsyncedUsersList = rawUnsyncedUsersList.map((user) => {
+        ...user,
+        'employee_code': user['employee_code'],
+      }).toList();
 
       if (unsyncedUsersList.isEmpty && _currentUserId == null) {
          print("AuthService: Nothing to sync or no user logged in.");
