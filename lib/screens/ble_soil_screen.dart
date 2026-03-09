@@ -93,7 +93,6 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
     _scanSubscription?.cancel();
 
-    // Listen and collect only "Soil Sensor BLE" devices
     _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
       final sensors = results
           .where((r) => r.device.platformName == 'Soil Sensor BLE')
@@ -209,10 +208,12 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
     double? score;
     try {
-      score = _soilModel.predict(
+      final rawScore = _soilModel.predict(
         f1: m, f2: t, f3: e.toDouble(),
         ph: p, f5: n.toDouble(), f6: ph2.toDouble(), f7: k.toDouble(),
       );
+      // Clamp to 0–100 regardless of raw model output
+      score = rawScore.clamp(0.0, 100.0);
     } catch (_) {}
 
     setState(() {
@@ -317,7 +318,6 @@ class _BleSoilScreenState extends State<BleSoilScreen>
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      // ── dark bg set at Scaffold ──
       child: Column(
         children: [
           _buildStatusBar(),
@@ -326,7 +326,6 @@ class _BleSoilScreenState extends State<BleSoilScreen>
           // ── Not connected ──
           if (_device == null) ...[
 
-            // Hero icon
             const SizedBox(height: 20),
             Center(
               child: Container(
@@ -824,7 +823,8 @@ class _BleSoilScreenState extends State<BleSoilScreen>
   }
 
   Widget _buildScoreCard() {
-    final score = _soilScore!;
+    // ✅ FIX: clamp score to 0–100 range
+    final score = _soilScore!.clamp(0.0, 100.0);
     final color = score >= 75 ? _lime : score >= 50 ? Colors.orangeAccent : Colors.redAccent;
     final label = score >= 75 ? 'Healthy' : score >= 50 ? 'Moderate' : 'Poor';
 
@@ -840,8 +840,9 @@ class _BleSoilScreenState extends State<BleSoilScreen>
         Text('SOIL HEALTH SCORE',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.8, color: _cream.withOpacity(0.35))),
         const SizedBox(height: 10),
+        // ✅ FIX: display with % suffix, 1 decimal place
         Text(
-          score.toStringAsFixed(1),
+          '${score.toStringAsFixed(1)}%',
           style: TextStyle(fontSize: 52, fontWeight: FontWeight.bold, color: color),
         ),
         const SizedBox(height: 6),
