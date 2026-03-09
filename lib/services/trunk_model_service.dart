@@ -1,7 +1,9 @@
 // File: lib/services/trunk_model_service.dart
 
 import 'dart:io';
+// ignore: unused_import
 import 'dart:typed_data';
+// ignore: unused_import
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;

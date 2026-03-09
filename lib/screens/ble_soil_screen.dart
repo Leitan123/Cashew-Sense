@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/soil_model_service.dart';
+// ignore: unused_import
 import '../widgets/common_widgets.dart';
 import '../services/localization_service.dart';
 import 'fertilizer_screen.dart';
@@ -31,6 +32,7 @@ class _BleSoilScreenState extends State<BleSoilScreen>
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<List<int>>? _notifySubscription;
   BluetoothDevice? _device;
+  // ignore: unused_field
   BluetoothCharacteristic? _soilCharacteristic;
 
   // Scanned soil sensors found
