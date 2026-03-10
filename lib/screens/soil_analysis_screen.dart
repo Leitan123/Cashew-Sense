@@ -48,7 +48,7 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
 
   void _runPrediction() {
     try {
-      final prediction = _model.predict(
+      final rawPrediction = _model.predict(
         f1: 32.67,
         f2: 1.99,
         f3: 76.93,
@@ -57,6 +57,8 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
         f6: 14.58,
         f7: 25.13,
       );
+      // ✅ FIX: clamp to 0–100 range
+      final prediction = rawPrediction.clamp(0.0, 100.0);
       debugPrint('📊 Prediction result: $prediction');
       setState(() => _result = prediction);
     } catch (e) {
@@ -71,15 +73,16 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
     super.dispose();
   }
 
+  // ✅ FIX: thresholds now match 0–100 scale
   String _scoreLabel(double score) {
-    if (score >= 0.7) return 'Excellent'.tr(context);
-    if (score >= 0.5) return 'Moderate'.tr(context);
+    if (score >= 70) return 'Excellent'.tr(context);
+    if (score >= 50) return 'Moderate'.tr(context);
     return 'Poor'.tr(context);
   }
 
   Color _scoreColor(double score) {
-    if (score >= 0.7) return _lime;
-    if (score >= 0.5) return Colors.orangeAccent;
+    if (score >= 70) return _lime;
+    if (score >= 50) return Colors.orangeAccent;
     return Colors.redAccent;
   }
 
@@ -174,8 +177,9 @@ class _SoilAnalysisScreenState extends State<SoilAnalysisScreen> {
                                 Text('SOIL HEALTH SCORE'.tr(context),
                                     style: TextStyle(color: _cream.withOpacity(0.35), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.8)),
                                 const SizedBox(height: 16),
+                                // ✅ FIX: display with % suffix
                                 Text(
-                                  _result!.toStringAsFixed(2),
+                                  '${_result!.toStringAsFixed(1)}%',
                                   style: TextStyle(
                                     color: _scoreColor(_result!),
                                     fontSize: 56,
