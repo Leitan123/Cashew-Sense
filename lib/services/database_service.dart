@@ -14,7 +14,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE users (
@@ -59,6 +59,18 @@ class DatabaseService {
             phosphorus INTEGER,
             potassium INTEGER,
             soil_score REAL,
+            timestamp INTEGER NOT NULL,
+            synced    INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE nut_scans (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id   INTEGER NOT NULL,
+            imagePath TEXT    NOT NULL,
+            predicted_class TEXT NOT NULL,
+            weight    REAL    NOT NULL,
+            final_grade TEXT  NOT NULL,
             timestamp INTEGER NOT NULL,
             synced    INTEGER NOT NULL DEFAULT 0
           )
@@ -112,6 +124,20 @@ class DatabaseService {
         if (oldVersion < 5) {
           await db.execute("ALTER TABLE users ADD COLUMN employee_code TEXT");
         }
+        if (oldVersion < 6) {
+          await db.execute('''
+            CREATE TABLE nut_scans (
+              id        INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id   INTEGER NOT NULL,
+              imagePath TEXT    NOT NULL,
+              predicted_class TEXT NOT NULL,
+              weight    REAL    NOT NULL,
+              final_grade TEXT  NOT NULL,
+              timestamp INTEGER NOT NULL,
+              synced    INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+        }
       },
     );
   }
@@ -120,6 +146,8 @@ class DatabaseService {
     if (_db == null) throw StateError('DatabaseService not initialised. Call init() first.');
     return _db!;
   }
+
+  Database get database => _database;
 
   // ====== USERS ======
 
@@ -233,6 +261,38 @@ class DatabaseService {
 
   Future<void> deleteSoilScan(int id) async {
     await _database.delete('soil_scans', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ====== NUT SCANS ======
+
+  Future<int> insertNutScan(Map<String, dynamic> scanData) async {
+    return await _database.insert(
+      'nut_scans',
+      scanData,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getNutScans(int userId, {int limit = 20}) async {
+    return await _database.query(
+      'nut_scans',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedNutScans() async {
+    return await _database.query('nut_scans', where: 'synced = 0');
+  }
+
+  Future<void> markNutScanSynced(int id) async {
+    await _database.update('nut_scans', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteNutScan(int id) async {
+    await _database.delete('nut_scans', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> close() async {

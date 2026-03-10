@@ -498,6 +498,10 @@ import 'package:image_picker/image_picker.dart';
 import '../services/yolo_service.dart';
 import '../widgets/common_widgets.dart';
 import '../services/localization_service.dart';
+import '../services/database_service.dart';
+import '../services/auth_service.dart';
+import 'nut_scan_detail_screen.dart';
+import 'package:provider/provider.dart';
 
 const _charcoal = Color(0xFF1e2820);
 const _moss     = Color(0xFF3d5a2e);
@@ -602,12 +606,38 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   bool   _weightOk          = true;
   bool   _downgraded        = false;
   double _expectedMinWeight = 0.0;
+  
+  // Recent scans list 
+  List<Map<String, dynamic>> _recentScans = [];
 
   // ── init ──────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _loadModel();          // only thing that runs on start
+    _initDb();
+    _loadModel();
+  }
+
+  Future<void> _initDb() async {
+    await DatabaseService.instance.init();
+    await _loadScansFromDb();
+  }
+
+  Future<void> _loadScansFromDb() async {
+    final userId = AuthService.instance.currentUserId ?? 0;
+    final db = await DatabaseService.instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'nut_scans',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+      limit: 20,
+    );
+    if (mounted) {
+      setState(() {
+        _recentScans = maps;
+      });
+    }
   }
 
   // Loads model in background, then goes idle — does NOT touch results
@@ -692,6 +722,28 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
       }
 
       final grade = _computeGrade(cls, weightG);
+
+      // Save to local database if user is logged in
+      final userId = AuthService.instance.currentUserId;
+      if (userId != null) {
+        try {
+          await DatabaseService.instance.insertNutScan({
+            'user_id': userId,
+            'imagePath': _selectedImage!.path,
+            'predicted_class': cls,
+            'weight': weightG,
+            'final_grade': grade['finalGrade'],
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+            'synced': 0,
+          });
+          
+          await _loadScansFromDb(); // Refresh the list
+          // Trigger background auto sync
+          AuthService.instance.syncData();
+        } catch (e) {
+          debugPrint("Failed to save nut scan to local DB: $e");
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -832,7 +884,11 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildClassifyButton(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 32),
+                  
+                  // ── Recent Scans ─────────────────────────────────────────
+                  _buildRecentScansSection(),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -1132,8 +1188,8 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
     ),
   ]);
 
-  Widget _buildResultRow(IconData icon, String label, String value, Color color) =>
-    Row(children: [
+  Widget _buildResultRow(IconData icon, String label, String value, Color color) {
+    return Row(children: [
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(color: color.withOpacity(0.12),
@@ -1150,6 +1206,207 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
             overflow: TextOverflow.ellipsis, maxLines: 2),
       ])),
     ]);
+  }
+
+  Widget _buildRecentScansSection() {
+    final currentLang = Provider.of<LocalizationService>(context, listen: false).currentLanguage;
+    final recentScansText = {
+      'en': 'RECENT SCANS',
+      'si': 'මෑතකදී කළ පරීක්ෂණ',
+      'ta': 'சமீபத்திய ஸ்கேன்கள்',
+    };
+    final noScansText = {
+      'en': 'No recent scans yet.',
+      'si': 'මෑතකදී කළ පරීක්ෂණ කිසිවක් හමු නොවීය.',
+      'ta': 'சமீபத்திய ஸ்கேன்கள் எதுவும் கிடைக்கவில்லை.',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              recentScansText[currentLang] ?? 'RECENT SCANS',
+              style: TextStyle(
+                color: _cream.withOpacity(0.35),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.07))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 130,
+          child: _recentScans.isEmpty
+              ? Center(
+                  child: Text(noScansText[currentLang] ?? 'No recent scans yet.',
+                      style: TextStyle(color: _cream.withOpacity(0.3), fontSize: 13)))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _recentScans.length,
+                  itemBuilder: (context, index) {
+                    final scan = _recentScans[index];
+                    final imageFile = File(scan['imagePath'] as String);
+                    final grade = scan['final_grade'] as String;
+                    final weight = scan['weight'] as num;
+                    
+                    final isGradeA = grade == 'A';
+                    final gradeColor = isGradeA ? _lime : (grade == 'B' ? Colors.orangeAccent : Colors.redAccent);
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NutScanDetailScreen(
+                              imagePath: imageFile.path,
+                              predictedClass: scan['predicted_class'],
+                              weight: weight.toDouble(),
+                              finalGrade: grade,
+                            ),
+                          ),
+                        );
+                      },
+                      onLongPress: () async {
+                        final id = scan['id'] as int;
+                        
+                        final deleteTitles = {
+                          'en': 'Delete Scan?',
+                          'si': 'පරීක්ෂණය මකා දමන්නද?',
+                          'ta': 'ஸ்கேனை நீக்கவா?',
+                        };
+                        final deleteMsg = {
+                          'en': 'Are you sure you want to remove this scan from your history?',
+                          'si': 'ඔබට මෙම පරීක්ෂණය ඉතිහාසයෙන් ඉවත් කිරීමට අවශ්‍ය බව විශ්වාසද?',
+                          'ta': 'வரலாற்றிலிருந்து இந்த ஸ்கேனை அகற்ற விரும்புகிறீர்களா?',
+                        };
+                        final cancelText = {
+                          'en': 'CANCEL',
+                          'si': 'අවලංගු කරන්න',
+                          'ta': 'ரத்துசெய்',
+                        };
+                        final deleteText = {
+                          'en': 'DELETE',
+                          'si': 'මකා දමන්න',
+                          'ta': 'நீக்கு',
+                        };
+
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: const Color(0xFF1e2820),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              side: BorderSide(color: _lime.withOpacity(0.18)),
+                            ),
+                            title: Row(
+                              children: [
+                                const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+                                const SizedBox(width: 8),
+                                Text(deleteTitles[currentLang] ?? 'Delete Scan?',
+                                    style: const TextStyle(color: _cream, fontSize: 16, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            content: Text(
+                              deleteMsg[currentLang] ?? 'Remove this scan from your history?',
+                              style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13, height: 1.5),
+                            ),
+                            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: Text(cancelText[currentLang] ?? 'Cancel',
+                                    style: TextStyle(color: _cream.withOpacity(0.5), fontSize: 13)),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent.withOpacity(0.85),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                ),
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: Text(deleteText[currentLang] ?? 'Delete', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          final db = await DatabaseService.instance.database;
+                          await db.delete('nut_scans', where: 'id = ?', whereArgs: [id]);
+                          await _loadScansFromDb();
+                        }
+                      },
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: gradeColor.withOpacity(0.4),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                imageFile,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  child: const Icon(Icons.broken_image,
+                                      color: Colors.white38),
+                                ),
+                              ),
+                              // Grade name label at the bottom
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4, horizontal: 6),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.75),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Grade $grade — ${weight.toStringAsFixed(1)}g',
+                                    style: TextStyle(
+                                      color: gradeColor,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

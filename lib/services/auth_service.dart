@@ -346,8 +346,41 @@ class AuthService {
 
       payload['soil_scans'] = soilScansPayload;
 
+      // 5. Get unsynced nut scans
+      final unsyncedNutScans = await db.getUnsyncedNutScans();
+      final List<Map<String, dynamic>> nutScansPayload = [];
+      
+      for (var scan in unsyncedNutScans) {
+        String base64Image = '';
+        if (scan['imagePath'] != 'placeholder') {
+          final file = File(scan['imagePath']);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            base64Image = base64Encode(bytes);
+          }
+        }
+        
+        final user = await db.getUserById(scan['user_id']);
+        if (user != null) {
+          nutScansPayload.add({
+            'user_phone': user['phone'],
+            'predicted_class': scan['predicted_class'],
+            'weight': scan['weight'],
+            'final_grade': scan['final_grade'],
+            'timestamp': scan['timestamp'],
+            'imageBase64': base64Image,
+          });
+        }
+      }
+
+      payload['nut_scans'] = nutScansPayload;
+
       // Ensure we have something
-      if (unsyncedUsersList.isEmpty && (payload['leaf_scans'] == null || payload['leaf_scans'].isEmpty) && (payload['pest_scans'] == null || payload['pest_scans'].isEmpty) && soilScansPayload.isEmpty) {
+      if (unsyncedUsersList.isEmpty && 
+          (payload['leaf_scans'] == null || payload['leaf_scans'].isEmpty) && 
+          (payload['pest_scans'] == null || payload['pest_scans'].isEmpty) && 
+          soilScansPayload.isEmpty && 
+          nutScansPayload.isEmpty) {
         print("AuthService: No new data to sync to cloud.");
         return; // Nothing to sync
       }
@@ -365,11 +398,11 @@ class AuthService {
         for (var u in unsyncedUsersList) {
           await db.markUserSynced(u['id']);
         }
-        // * In this architecture, scans are automatically marked synced when downloaded 
-        //   since we don't have a 'synced' column for leaf and pest scans.
-        //   However, for soil scans we added a `synced` flag.
         for (var s in unsyncedSoilScans) {
           await db.markSoilScanSynced(s['id']);
+        }
+        for (var s in unsyncedNutScans) {
+          await db.markNutScanSynced(s['id']);
         }
         
         print("AuthService: Background sync completed successfully.");
