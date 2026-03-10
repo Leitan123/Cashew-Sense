@@ -195,7 +195,7 @@ class _DiseasePanel extends StatelessWidget {
               Container(
                 width: 44, height: 44,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF3d5a2e), Color(0xFF5c8a3c)]),
+                  gradient: const LinearGradient(colors: [_moss, _leaf]),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.coronavirus_outlined, color: Colors.white, size: 22),

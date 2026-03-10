@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+// ignore: unused_import
 import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
 
@@ -228,6 +229,7 @@ class _SoilScanHistoryScreenState extends State<SoilScanHistoryScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildDetailRow(String label, String value) {
     return Builder(builder: (ctx) {
       final c = ctx.ac;

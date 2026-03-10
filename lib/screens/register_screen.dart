@@ -267,6 +267,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleRegister,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _leaf,
+                    foregroundColor: _cream,
+                  ),
                   child: _isLoading 
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: _cream, strokeWidth: 2))
                       : Text('Register'.tr(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

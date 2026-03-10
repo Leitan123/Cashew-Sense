@@ -21,7 +21,7 @@ class PestDetectionScreen extends StatefulWidget {
 
 class _PestDetectionScreenState extends State<PestDetectionScreen> {
   File? _imageFile;
-  List<List<double>> _predictions = [];
+  List<dynamic> _predictions = [];
   final YoloService _yoloService = YoloService();
   bool _loading = false;
   bool _modelLoaded = false;
@@ -359,17 +359,17 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                   children: [
                     Image.file(_imageFile!, fit: BoxFit.contain, width: double.infinity),
                     if (_predictions.isNotEmpty)
-                      Positioned.fill(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final scaleX = constraints.maxWidth / 640;
-                            final scaleY = constraints.maxHeight / 640;
-                            return CustomPaint(
-                              painter: BoxPainter(_predictions, scaleX, scaleY, _yoloService.classNames),
-                            );
-                          },
+                        Positioned.fill(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final scaleX = constraints.maxWidth / 640;
+                              final scaleY = constraints.maxHeight / 640;
+                              return CustomPaint(
+                                painter: BoxPainter(_predictions.cast<List<double>>(), scaleX, scaleY, _yoloService.classNames),
+                              );
+                            },
+                          ),
                         ),
-                      ),
                   ],
                 ),
               ),
