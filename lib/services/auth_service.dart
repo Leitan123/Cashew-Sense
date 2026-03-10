@@ -55,7 +55,7 @@ class AuthService {
           throw Exception('Internet connection is required to register with an Employee Code.');
         }
 
-        final String verifyUrl = 'https://dimgrey-fly-458602.hostingersite.com/api/verify-employee-code';
+        final String verifyUrl = 'https://powderblue-salamander-482455.hostingersite.com/api/verify-employee-code';
         final verifyRes = await http.post(
           Uri.parse(verifyUrl),
           headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -108,7 +108,7 @@ class AuthService {
     }
 
     final pinHash = _hashPin(pin);
-    final String loginUrl = 'https://dimgrey-fly-458602.hostingersite.com/api/login';
+    final String loginUrl = 'https://powderblue-salamander-482455.hostingersite.com/api/login';
 
     final response = await http.post(
       Uri.parse(loginUrl),
@@ -254,7 +254,7 @@ class AuthService {
     print("AuthService: Starting background sync...");
     
     // Using live hosted API endpoint
-    final String apiUrl = 'https://dimgrey-fly-458602.hostingersite.com/api/sync';
+    final String apiUrl = 'https://powderblue-salamander-482455.hostingersite.com/api/sync';
 
     try {
       final db = DatabaseService.instance;
