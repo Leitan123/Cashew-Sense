@@ -679,6 +679,18 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
             : 'Class $id';
       }
 
+      // ── Non-cashew detection guard ─────────────────────────────────────
+      // If no nut was detected, or confidence is too low, treat as
+      // "not a cashew nut" and show a user-friendly message.
+      const double kMinCashewConfidence = 0.35;
+      if (detections.isEmpty || conf < kMinCashewConfidence) {
+        if (mounted) {
+          setState(() => _appState = _AppState.idle);
+          _showNotCashewDialog();
+        }
+        return;
+      }
+
       final grade = _computeGrade(cls, weightG);
 
       if (mounted) {
@@ -716,6 +728,32 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  void _showNotCashewDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF243020),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.info_outline_rounded,
+            color: Colors.orangeAccent, size: 48),
+        title: Text('Not a Cashew Nut'.tr(context),
+            style: const TextStyle(color: _cream, fontWeight: FontWeight.bold)),
+        content: Text(
+          'The uploaded image does not appear to be a cashew nut. Please upload a clear image of a cashew nut for grading.'.tr(context),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _cream.withOpacity(0.7), fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('OK'.tr(context),
+                style: const TextStyle(color: _lime, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
