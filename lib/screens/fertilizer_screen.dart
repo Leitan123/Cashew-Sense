@@ -46,6 +46,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
   File? _imageFile;
   Map<String, dynamic>? _trunkResult;
   bool _classifying = false;
+  bool _invalidImage = false;
 
   late TextEditingController _nCtrl;
   late TextEditingController _pCtrl;
@@ -109,6 +110,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
       _imageFile = File(picked.path);
       _trunkResult = null;
       _recommendations = null;
+      _invalidImage = false;
     });
     await _classifyTrunk();
   }
@@ -118,7 +120,29 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
     setState(() => _classifying = true);
     try {
       final result = await _trunkModel.predict(_imageFile!);
-      setState(() => _trunkResult = result);
+      final scores = List<double>.from(result['scores'] as List);
+
+      // Sort descending to get top-2
+      final sorted = [...scores]..sort((a, b) => b.compareTo(a));
+      final top1 = sorted[0];
+      final top2 = sorted[1];
+      final confidence = top1 * 100;
+      final margin = (top1 - top2) * 100; // gap between best and second-best
+
+      // Valid trunk: model must be highly confident AND clearly prefer one class
+      final bool isTrunk = confidence >= 75.0 && margin >= 20.0;
+
+      if (!isTrunk) {
+        setState(() {
+          _trunkResult = null;
+          _invalidImage = true;
+        });
+      } else {
+        setState(() {
+          _trunkResult = result;
+          _invalidImage = false;
+        });
+      }
     } catch (e) {
       _showSnack('Classification failed: $e');
     } finally {
@@ -134,6 +158,10 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
 
   // ── Farmer-friendly recommendation logic ──────────────────────────────────
   void _generateRecommendation() {
+    if (_invalidImage) {
+      _showSnack('Please upload a correct cashew trunk image first');
+      return;
+    }
     if (_trunkResult == null) {
       _showSnack('Please capture a trunk image first');
       return;
@@ -520,6 +548,7 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
             const SizedBox(height: 10),
             _buildImageSection(),
             const SizedBox(height: 20),
+            if (_invalidImage) _buildInvalidImageCard(),
             if (_trunkResult != null) _buildTrunkResult(),
             const SizedBox(height: 20),
             _buildSectionHeader('🌿 ' + 'Soil NPK Values'.tr(context)),
@@ -683,6 +712,52 @@ class _FertilizerScreenState extends State<FertilizerScreen> {
                       ),
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Invalid image warning ─────────────────────────────────────────────────
+  Widget _buildInvalidImageCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3a1a1a),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.6)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 32),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invalid Image',
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Please upload a correct cashew trunk image to continue.',
+                  style: TextStyle(color: Colors.red.shade200, fontSize: 13),
                 ),
               ],
             ),
