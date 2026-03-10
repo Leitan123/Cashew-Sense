@@ -82,12 +82,49 @@ class _LeafDetectorState extends State<LeafDetector> {
     }
   }
 
+  /// Check if the image likely contains a leaf by analysing green-channel
+  /// dominance. Returns true when enough pixels are "greenish".
+  bool _isLeafImage(img.Image image) {
+    final sampled = img.copyResize(image, width: 64, height: 64);
+    int greenPixels = 0;
+    final totalPixels = sampled.width * sampled.height;
+
+    for (int y = 0; y < sampled.height; y++) {
+      for (int x = 0; x < sampled.width; x++) {
+        final pixel = sampled.getPixel(x, y);
+        final r = pixel.r.toDouble();
+        final g = pixel.g.toDouble();
+        final b = pixel.b.toDouble();
+        // A pixel is "greenish" when green is the dominant channel
+        if (g > r && g > b && g > 40) {
+          greenPixels++;
+        }
+      }
+    }
+
+    final greenRatio = greenPixels / totalPixels;
+    // At least 15 % of pixels should be green for a leaf image
+    return greenRatio >= 0.15;
+  }
+
   void _runModel(File imageFile) async {
     if (_interpreter == null) return;
 
     final bytes = await imageFile.readAsBytes();
     final image = img.decodeImage(bytes);
     if (image == null) return;
+
+    // Validate: reject non-leaf images before running the disease model
+    if (!_isLeafImage(image)) {
+      setState(() {
+        _image = imageFile;
+        _result = '';
+      });
+      if (mounted) {
+        _showInvalidImageDialog();
+      }
+      return;
+    }
 
     final resizedImage = img.copyResize(image, width: 128, height: 128);
 
@@ -107,26 +144,25 @@ class _LeafDetectorState extends State<LeafDetector> {
 
     _interpreter!.run(inputTensor, output);
 
-    final maxIndex = output[0].indexOf(
-      output[0].reduce((a, b) => a > b ? a : b),
-    );
+    final maxConfidence = output[0].reduce((a, b) => a > b ? a : b);
+    final maxIndex = output[0].indexOf(maxConfidence);
 
     final resultLabel =
-        '${classNames[maxIndex]} (${(output[0][maxIndex] * 100).toStringAsFixed(2)}%)';
+        '${classNames[maxIndex]} (${(maxConfidence * 100).toStringAsFixed(2)}%)';
     final diseaseName = classNames[maxIndex];
 
     // Save image permanently out of cache before inserting to db
     final dbPath = await getDatabasesPath();
     final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
     if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
-    
+
     final fileName = 'leaf_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final permanentImage = await imageFile.copy(p.join(imagesDir.path, fileName));
 
     // Persist to SQLite
     final userId = AuthService.instance.currentUserId ?? 0;
     await DatabaseService.instance.insertScan(userId, permanentImage.path, diseaseName);
-    
+
     // Trigger a sync immediately
     AuthService.instance.syncData();
 
@@ -136,6 +172,55 @@ class _LeafDetectorState extends State<LeafDetector> {
 
     // Reload list from DB so Recent Scans is always consistent with the database
     await _loadScansFromDb();
+  }
+
+  void _showInvalidImageDialog() {
+    final currentLang = context.read<LocalizationService>().currentLanguage;
+    final titles = {
+      'en': 'Invalid Image',
+      'si': 'වලංගු නොවන රූපය',
+      'ta': 'தவறான படம்',
+    };
+    final messages = {
+      'en': 'Please upload a correct cashew leaf image for accurate disease detection.',
+      'si': 'නිවැරදි කජු පත්‍ර රූපයක් උඩුගත කරන්න.',
+      'ta': 'துல்லியமான நோய் கண்டறிதலுக்கு சரியான முந்திரி இலை படத்தை பதிவேற்றவும்.',
+    };
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1e2820),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: Colors.orangeAccent.withOpacity(0.3)),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 24),
+            const SizedBox(width: 8),
+            Text(titles[currentLang] ?? 'Invalid Image',
+                style: TextStyle(color: _cream, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          messages[currentLang] ?? 'Please upload a correct cashew leaf image for accurate disease detection.',
+          style: TextStyle(color: _cream.withOpacity(0.65), fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _moss,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onNavTapped(int index) {
