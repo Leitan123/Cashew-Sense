@@ -69,9 +69,9 @@ class _LeafDetectorState extends State<LeafDetector> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null) {
       setState(() {
@@ -80,6 +80,47 @@ class _LeafDetectorState extends State<LeafDetector> {
       });
       _runModel(File(pickedFile.path));
     }
+  }
+
+  void _showPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext bc) {
+        return Container(
+          decoration: BoxDecoration(
+            color: _charcoal,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            border: Border.all(color: _lime.withOpacity(0.18)),
+          ),
+          child: SafeArea(
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: _lime),
+                  title: Text('Gallery'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera, color: _lime),
+                  title: Text('Camera'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Check if the image likely contains a leaf by analysing green-channel
@@ -565,7 +606,7 @@ class _LeafDetectorState extends State<LeafDetector> {
                       Positioned(
                         bottom: -26,
                         child: GestureDetector(
-                          onTap: _pickImage,
+                          onTap: _showPicker,
                           child: Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(

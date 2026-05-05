@@ -21,7 +21,7 @@ class PestDetectionScreen extends StatefulWidget {
 
 class _PestDetectionScreenState extends State<PestDetectionScreen> {
   File? _imageFile;
-  List<dynamic> _predictions = [];
+  List<NutDetection> _predictions = [];
   final YoloService _yoloService = YoloService();
   bool _loading = false;
   bool _modelLoaded = false;
@@ -83,7 +83,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     if (!_modelLoaded) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Model is not loaded yet")),
@@ -91,7 +91,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
       return;
     }
 
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(source: source);
     if (picked == null) return;
 
     setState(() {
@@ -100,48 +100,96 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
       _loading = true;
     });
 
-    final results = await _yoloService.predict(_imageFile!);
+    try {
+      final results = await _yoloService.predict(_imageFile!);
+      setState(() {
+        _predictions = results;
+      });
 
-    setState(() {
-      _predictions = results;
-    });
+      if (_predictions.isNotEmpty) {
+        int topClassIdx = _getTopPredictionClassIndex();
+        if (topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length) {
+          String detectedLabel = _yoloService.classNames[topClassIdx];
+          
+          // Save image permanently out of cache before inserting to db
+          final dbPath = await getDatabasesPath();
+          final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
+          if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
+          
+          final fileName = 'pest_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final permanentImage = await _imageFile!.copy(p.join(imagesDir.path, fileName));
 
-    if (_predictions.isNotEmpty) {
-      int topClassIdx = _getTopPredictionClassIndex();
-      if (topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length) {
-        String detectedLabel = _yoloService.classNames[topClassIdx];
-        
-        // Save image permanently out of cache before inserting to db
-        final dbPath = await getDatabasesPath();
-        final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
-        if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
-        
-        final fileName = 'pest_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final permanentImage = await _imageFile!.copy(p.join(imagesDir.path, fileName));
-
-        final userId = AuthService.instance.currentUserId ?? 0;
-        await DatabaseService.instance.insertPestScan(userId, permanentImage.path, detectedLabel);
-        
-        // Trigger a sync immediately
-        AuthService.instance.syncData();
-        
-        await _loadScansFromDb();
+          final userId = AuthService.instance.currentUserId ?? 0;
+          await DatabaseService.instance.insertPestScan(userId, permanentImage.path, detectedLabel);
+          
+          // Trigger a sync immediately
+          AuthService.instance.syncData();
+          
+          await _loadScansFromDb();
+        }
+      }
+    } catch (e) {
+      print("Error during prediction: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error during prediction: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
       }
     }
+  }
 
-    setState(() {
-      _loading = false;
-    });
+  void _showPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext bc) {
+        return Container(
+          decoration: BoxDecoration(
+            color: _charcoal,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            border: Border.all(color: _lime.withOpacity(0.18)),
+          ),
+          child: SafeArea(
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.photo_library, color: _lime),
+                  title: Text('Gallery'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.photo_camera, color: _lime),
+                  title: Text('Camera'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Get the most confident prediction's class index to show its info
   int _getTopPredictionClassIndex() {
     if (_predictions.isEmpty) return -1;
     final topPred = _predictions[0];
-    if (topPred.length > 5) {
-      return topPred[5].toInt();
-    }
-    return -1;
+    return topPred.classId;
   }
 
   @override
@@ -307,7 +355,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
           const SizedBox(height: 16),
           
           InkWell(
-            onTap: _pickImage,
+            onTap: _showPicker,
             borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
@@ -365,7 +413,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                               final scaleX = constraints.maxWidth / 640;
                               final scaleY = constraints.maxHeight / 640;
                               return CustomPaint(
-                                painter: BoxPainter(_predictions.cast<List<double>>(), scaleX, scaleY, _yoloService.classNames),
+                                painter: BoxPainter(_predictions, scaleX, scaleY, _yoloService.classNames),
                               );
                             },
                           ),
@@ -803,7 +851,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 }
 
 class BoxPainter extends CustomPainter {
-  final List<List<double>> predictions;
+  final List<NutDetection> predictions;
   final double scaleX;
   final double scaleY;
   final List<String> classNames;
@@ -823,16 +871,13 @@ class BoxPainter extends CustomPainter {
     const imgHeight = 640;
 
     for (var pred in predictions) {
-      final x = pred[0] * imgWidth * scaleX;
-      final y = pred[1] * imgHeight * scaleY;
-      final w = pred[2] * imgWidth * scaleX;
-      final h = pred[3] * imgHeight * scaleY;
-      final conf = pred[4];
+      final x = pred.cx * imgWidth * scaleX;
+      final y = pred.cy * imgHeight * scaleY;
+      final w = pred.w * imgWidth * scaleX;
+      final h = pred.h * imgHeight * scaleY;
+      final conf = pred.confidence;
       
-      int classIndex = -1;
-      if (pred.length > 5) {
-        classIndex = pred[5].toInt();
-      }
+      final classIndex = pred.classId;
       
       String label = 'Pest';
       if (classIndex >= 0 && classIndex < classNames.length) {

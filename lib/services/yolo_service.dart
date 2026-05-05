@@ -520,16 +520,19 @@ class YoloService {
     final outputs    = _interpreter.getOutputTensors();
     final s0         = outputs[0].shape; // e.g. [1, 58, 8400]
 
-    // Detect layout: smaller dim = channels
+    // Layout detection: smaller dim = channels
     final bool layoutCB = s0[1] <= s0[2];
     final int  numCh    = layoutCB ? s0[1] : s0[2];
 
-    // If channels = 4 + 22 + 32 = 58 → this is a seg model
-    // even if TFLite only reports 1 output tensor
-    const int kNumClasses = 22;
-    const int kNumProtos  = 32;
-    _isSegModel = (outputs.length >= 2) ||
-                  (numCh == kNumClasses + 4 + kNumProtos);
+    // derive numClasses and numProtos dynamically
+    // If numCh is large (e.g. > 40), it's likely a segmentation model
+    // Standard YOLOv8/v11 detection: 4 + numClasses
+    // Standard YOLOv8/v11 segmentation: 4 + numClasses + 32
+    if (numCh > 36) {
+      _isSegModel = true;
+    } else {
+      _isSegModel = (outputs.length >= 2);
+    }
 
     _isLoaded = true;
 
@@ -565,12 +568,20 @@ class YoloService {
     final int numCh     = layoutCB ? s0[1] : s0[2];
     final int numBoxes  = layoutCB ? s0[2] : s0[1];
 
-    // Hard-code known constants for this 22-class seg model
-    const int numClasses = 22;
-    const int numProtos  = 32;
+    // derive numClasses and numProtos based on shape
+    // If it's a seg model, it usually has 32 prototypes.
+    int numProtos = 0;
+    int numClasses = 0;
+    
+    if (_isSegModel) {
+      numProtos = 32;
+      numClasses = numCh - 4 - numProtos;
+    } else {
+      numClasses = numCh - 4;
+    }
 
     print("[YOLO] shape=$s0  layout=${layoutCB ? 'CB' : 'BC'}  ch=$numCh  boxes=$numBoxes  seg=$_isSegModel");
-    print("[YOLO] numClasses=$numClasses  numProtos=$numProtos  check=${4+numClasses+numProtos}==$numCh");
+    print("[YOLO] numClasses=$numClasses  numProtos=$numProtos");
 
     // Allocate output0 in exact raw shape
     var output0 = List.generate(1, (_) =>
