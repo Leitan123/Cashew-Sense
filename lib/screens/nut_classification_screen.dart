@@ -518,15 +518,15 @@ const Map<String, String> _gradeMap = {
   "W-320": "B", "S-210": "B", "S-240": "B", "S-320": "B",
   "S 210 (Dull White - Like Yellow)":           "B",
   "A-320 (Off White)":                          "B",
-  "A-240 (off White)":                          "A",
-  "SSW (Scrotch Whrinkles Wholes)":             "B",
-  "DW (Draught Whole)":                         "C",
-  "OW (oily Wholes)":                           "C",
-  "RW (Red Whole)":                             "C",
-  "UW (Unpilled Photri Whole)":                 "C",
-  "PKW (Partial Wholes Always Black Knots)":    "C",
-  "KW (Knot Wholes) Single Knot Green":         "C",
-  "KW-1 (Multiple Black Green Mix Knot Wholes)":"C",
+  "A-240 (off White)":                          "C",
+  "SSW (Scrotch Whrinkles Wholes)":             "C",
+  "DW (Draught Whole)":                         "Defected",
+  "OW (oily Wholes)":                           "Defected",
+  "RW (Red Whole)":                             "Defected",
+  "UW (Unpilled Photri Whole)":                 "Defected",
+  "PKW (Partial Wholes Always Black Knots)":    "Defected",
+  "KW (Knot Wholes) Single Knot Green":         "Defected",
+  "KW-1 (Multiple Black Green Mix Knot Wholes)":"Defected",
 };
 
 const Map<String, double> _weightThresholds = {
@@ -544,18 +544,54 @@ const double _defaultWeight = 1.0;
 const Map<String, Map<String, String>> _gradeInfo = {
   "A": {"label": "Grade A", "tag": "Premium",  "description": "Premium white whole cashews"},
   "B": {"label": "Grade B", "tag": "Standard", "description": "Standard / scorched / off-white cashews"},
-  "C": {"label": "Grade C", "tag": "Economy",  "description": "Defect / special condition cashews"},
+  "C": {"label": "Grade C", "tag": "Economy",  "description": "Lower quality — sellable at reduced price"},
+  "Defected": {"label": "Defected", "tag": "Rejected", "description": "Physically defected — not suitable for sale"},
 };
 
-Map<String, dynamic> _computeGrade(String cls, double weightG) {
-  final String orig     = _gradeMap[cls] ?? "C";
+Map<String, dynamic> _computeGrade(String cls, double weightG, double conf, bool isDefected) {
+  final String orig     = _gradeMap[cls] ?? "Defected";
   String grade          = orig;
   final double expected = _weightThresholds[cls] ?? _defaultWeight;
-  final bool   weightOk = weightG >= expected * 0.85;
-  if (!weightOk) {
-    if (grade == "A") grade = "B";
-    else if (grade == "B") grade = "C";
+  List<String> downgradeReasons = [];
+  
+  if (isDefected) {
+    if (grade != "Defected") {
+        grade = "Defected";
+        downgradeReasons.add("defect_screener: positive");
+    }
   }
+
+  if (conf < 0.45 && grade == "A") {
+    grade = "B";
+    downgradeReasons.add("low_model_confidence (${(conf*100).toStringAsFixed(1)}%)");
+  }
+
+  bool weightOk = true;
+  if (grade == "Defected") {
+    weightOk = weightG >= expected * 0.85;
+  } else if (weightG >= 2.5) {
+    grade = "A";
+    weightOk = true;
+  } else {
+    double weightRatio = expected > 0 ? (weightG / expected) : 1.0;
+    weightOk = weightRatio >= 0.85;
+    
+    if (!weightOk) {
+        if (weightRatio < 0.65) {
+            grade = "C";
+            downgradeReasons.add("severely_underweight (ratio=${weightRatio.toStringAsFixed(2)})");
+        } else {
+            if (grade == "A") {
+                grade = "B";
+                downgradeReasons.add("underweight (ratio=${weightRatio.toStringAsFixed(2)})");
+            } else if (grade == "B") {
+                grade = "C";
+                downgradeReasons.add("underweight (ratio=${weightRatio.toStringAsFixed(2)})");
+            }
+        }
+    }
+  }
+
   final info = _gradeInfo[grade] ?? {};
   return {
     'finalGrade':        grade,
@@ -566,6 +602,7 @@ Map<String, dynamic> _computeGrade(String cls, double weightG) {
     'downgraded':        orig != grade,
     'weightOk':          weightOk,
     'expectedMinWeight': expected,
+    'downgradeReasons':  downgradeReasons,
   };
 }
 
@@ -590,6 +627,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   final ImagePicker _picker            = ImagePicker();
   final TextEditingController _weight  = TextEditingController();
   final YoloService _yolo              = YoloService();
+  final YoloService _defectService     = YoloService();
 
   _AppState _appState = _AppState.modelLoading;
 
@@ -606,6 +644,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   bool   _weightOk          = true;
   bool   _downgraded        = false;
   double _expectedMinWeight = 0.0;
+  List<String> _downgradeReasons = [];
   
   // Recent scans list 
   List<Map<String, dynamic>> _recentScans = [];
@@ -646,6 +685,11 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
       await _yolo.loadModel();
     } catch (e) {
       debugPrint("Model load error: $e");
+    }
+    try {
+      await _defectService.loadModel(modelPath: 'assets/defect_model_float32.tflite', classes: ['good', 'defect']);
+    } catch (e) {
+      debugPrint("No defect screener found: $e");
     }
     if (mounted) setState(() => _appState = _AppState.idle);
   }
@@ -762,7 +806,26 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
         return;
       }
 
-      final grade = _computeGrade(cls, weightG);
+      // ── Defect Screener Check ──────────────────────────────────────────
+      bool isDefected = false;
+      if (_defectService.isLoaded) {
+          final defectResults = await _defectService.predict(_selectedImage!, confThreshold: 0.1);
+          if (defectResults.isNotEmpty) {
+              final bestDefect = defectResults.reduce((a, b) => a.confidence >= b.confidence ? a : b);
+              if (bestDefect.classId >= 0 && bestDefect.classId < _defectService.classNames.length) {
+                  final className = _defectService.classNames[bestDefect.classId].toLowerCase();
+                  bool hasDefectKeyword = className.contains('defect') || className.contains('bad') || className.contains('damage') || className.contains('reject') || className.contains('broken');
+                  bool hasGoodKeyword = className.contains('good') || className.contains('normal') || className.contains('ok') || className.contains('healthy') || className.contains('whole');
+                  if (hasDefectKeyword) {
+                    isDefected = true;
+                  } else if (!hasDefectKeyword && !hasGoodKeyword) {
+                    isDefected = bestDefect.confidence >= 0.60;
+                  }
+              }
+          }
+      }
+
+      final grade = _computeGrade(cls, weightG, conf, isDefected);
 
       // Save to local database if user is logged in
       final userId = AuthService.instance.currentUserId;
@@ -799,6 +862,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
           _weightOk          = grade['weightOk'];
           _downgraded        = grade['downgraded'];
           _expectedMinWeight = grade['expectedMinWeight'];
+          _downgradeReasons  = grade['downgradeReasons'] ?? [];
           _appState          = _AppState.done;
         });
       }
@@ -816,6 +880,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
     _originalGrade = ""; _finalGrade = ""; _gradeLabel = "";
     _gradeTag = ""; _gradeDescription = ""; _weightOk = true;
     _downgraded = false; _expectedMinWeight = 0.0;
+    _downgradeReasons = [];
   }
 
   void _showSnack(String msg) {
@@ -1142,7 +1207,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
       _buildWeightCheckRow(),
       const Divider(height: 20, color: Color(0x1Af5f0e8)),
       _buildFinalGradeRow(),
-      if (_downgraded) ...[
+      if (_downgraded || _downgradeReasons.isNotEmpty) ...[
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1156,8 +1221,10 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
                 color: Colors.orangeAccent, size: 16),
             const SizedBox(width: 8),
             Expanded(child: Text(
-              'Downgraded Grade $_originalGrade → Grade $_finalGrade '
-              '(min ${(_expectedMinWeight * 0.85).toStringAsFixed(2)} g required)',
+              _finalGrade == 'Defected'
+                 ? 'Nut rejected as DEFECTED (Reasons: ${_downgradeReasons.join(", ")})'
+                 : 'Downgraded Grade $_originalGrade → Grade $_finalGrade '
+                   '(${_downgradeReasons.isNotEmpty ? 'Reasons: ' + _downgradeReasons.join(", ") : 'min ${(_expectedMinWeight * 0.85).toStringAsFixed(2)} g required'})',
               style: const TextStyle(color: Colors.orangeAccent,
                   fontSize: 11, height: 1.4),
             )),
@@ -1468,6 +1535,7 @@ class NutMaskPainter extends CustomPainter {
     "A": Color(0xFFa8c96e),
     "B": Colors.orangeAccent,
     "C": Colors.redAccent,
+    "Defected": Colors.red,
   };
 
   @override
