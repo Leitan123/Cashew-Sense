@@ -22,7 +22,10 @@ class PestDetectionScreen extends StatefulWidget {
 class _PestDetectionScreenState extends State<PestDetectionScreen> {
   File? _imageFile;
   List<NutDetection> _predictions = [];
+  String? _detectedLabel;
+  List<String> _currentModelClassNames = [];
   final YoloService _yoloService = YoloService();
+  final YoloService _stemBorerService = YoloService();
   bool _loading = false;
   bool _modelLoaded = false;
   
@@ -58,6 +61,13 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
   Future<void> _loadModel() async {
     setState(() => _loading = true);
     try {
+      // Load first model: stemborar.tflite
+      await _stemBorerService.loadModel(
+        modelPath: 'assets/stemborar.tflite',
+        classes: ['stem_borer'],
+      );
+
+      // Load second model: pest_model.tflite
       await _yoloService.loadModel(
         modelPath: 'assets/pest_model.tflite',
         classes: [
@@ -66,15 +76,16 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
           'stem_borer',
         ],
       );
+      
       setState(() {
         _modelLoaded = true;
         _loading = false;
       });
     } catch (e) {
-      print("Error loading model: $e");
+      print("Error loading models: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading model: $e")),
+          SnackBar(content: Text("Error loading models: $e")),
         );
       }
       setState(() {
@@ -97,36 +108,83 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
     setState(() {
       _imageFile = File(picked.path);
       _predictions = [];
+      _detectedLabel = null;
+      _currentModelClassNames = [];
       _loading = true;
     });
 
     try {
-      final results = await _yoloService.predict(_imageFile!);
+      const double CONF_THRESHOLD = 0.50;
+      final Set<String> sbKeywords = {
+        "stem_borer", "stem borer", "stemborer", "cashew stem borer"
+      };
+
+      // Step 1: run stemborer model to check for stem borer
+      List<NutDetection> results = await _stemBorerService.predict(
+        _imageFile!, 
+        confThreshold: CONF_THRESHOLD
+      );
+      String detectedLabel = '';
+      bool isStemBorer = false;
+      List<String> activeClassNames = [];
+
+      if (results.isNotEmpty) {
+        // Check if ANY detection contains stem borer keywords
+        for (var pred in results) {
+          if (pred.classId >= 0 && pred.classId < _stemBorerService.classNames.length) {
+            final label = _stemBorerService.classNames[pred.classId].toLowerCase();
+            if (sbKeywords.contains(label)) {
+              isStemBorer = true;
+              break;
+            }
+          }
+        }
+
+        if (isStemBorer) {
+          // If stem borer detected, use results from first model
+          final topPred = results[0];
+          detectedLabel = _stemBorerService.classNames[topPred.classId];
+          activeClassNames = _stemBorerService.classNames;
+        }
+      }
+
+      // Step 2: If no stem borer found, fall back to multi-pest model
+      if (!isStemBorer) {
+        results = await _yoloService.predict(
+          _imageFile!, 
+          confThreshold: CONF_THRESHOLD
+        );
+        if (results.isNotEmpty) {
+          final topPred = results[0];
+          if (topPred.classId >= 0 && topPred.classId < _yoloService.classNames.length) {
+            detectedLabel = _yoloService.classNames[topPred.classId];
+            activeClassNames = _yoloService.classNames;
+          }
+        }
+      }
+
       setState(() {
         _predictions = results;
+        _detectedLabel = (detectedLabel.isNotEmpty) ? detectedLabel : null;
+        _currentModelClassNames = activeClassNames;
       });
 
-      if (_predictions.isNotEmpty) {
-        int topClassIdx = _getTopPredictionClassIndex();
-        if (topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length) {
-          String detectedLabel = _yoloService.classNames[topClassIdx];
-          
-          // Save image permanently out of cache before inserting to db
-          final dbPath = await getDatabasesPath();
-          final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
-          if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
-          
-          final fileName = 'pest_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final permanentImage = await _imageFile!.copy(p.join(imagesDir.path, fileName));
+      if (detectedLabel.isNotEmpty) {
+        // Save image permanently out of cache before inserting to db
+        final dbPath = await getDatabasesPath();
+        final imagesDir = Directory(p.join(dbPath, 'saved_scans'));
+        if (!await imagesDir.exists()) await imagesDir.create(recursive: true);
+        
+        final fileName = 'pest_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final permanentImage = await _imageFile!.copy(p.join(imagesDir.path, fileName));
 
-          final userId = AuthService.instance.currentUserId ?? 0;
-          await DatabaseService.instance.insertPestScan(userId, permanentImage.path, detectedLabel);
-          
-          // Trigger a sync immediately
-          AuthService.instance.syncData();
-          
-          await _loadScansFromDb();
-        }
+        final userId = AuthService.instance.currentUserId ?? 0;
+        await DatabaseService.instance.insertPestScan(userId, permanentImage.path, detectedLabel);
+        
+        // Trigger a sync immediately
+        AuthService.instance.syncData();
+        
+        await _loadScansFromDb();
       }
     } catch (e) {
       print("Error during prediction: $e");
@@ -194,10 +252,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int topClassIdx = _getTopPredictionClassIndex();
-    String detectedLabel = topClassIdx >= 0 && topClassIdx < _yoloService.classNames.length 
-        ? _yoloService.classNames[topClassIdx] 
-        : '';
+    String detectedLabel = _detectedLabel ?? '';
         
     final String currentLang = Provider.of<LocalizationService>(context).currentLanguage;
     final Map<String, dynamic> langDb = localizedPestDatabase[currentLang] ?? localizedPestDatabase['en']!;
@@ -413,7 +468,7 @@ class _PestDetectionScreenState extends State<PestDetectionScreen> {
                               final scaleX = constraints.maxWidth / 640;
                               final scaleY = constraints.maxHeight / 640;
                               return CustomPaint(
-                                painter: BoxPainter(_predictions, scaleX, scaleY, _yoloService.classNames),
+                                painter: BoxPainter(_predictions, scaleX, scaleY, _currentModelClassNames),
                               );
                             },
                           ),

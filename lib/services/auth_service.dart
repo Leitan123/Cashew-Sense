@@ -278,10 +278,12 @@ class AuthService {
         'users': unsyncedUsersList,
       };
 
-      if (_currentUserId != null) {
-        final leafScans = await db.getScans(_currentUserId!, limit: 100);
-        final pestScans = await db.getPestScans(_currentUserId!, limit: 100);
+
+      // 2. Get unsynced leaf and pest scans
+      final unsyncedLeafScans = await db.getUnsyncedScans();
+      final unsyncedPestScans = await db.getUnsyncedPestScans();
         
+      if (_currentUserId != null) {
         final userPhone = _currentUserData!['phone'];
         
         Future<List<Map<String, dynamic>>> prepareScans(List<Map<String, dynamic>> localScans) async {
@@ -307,8 +309,38 @@ class AuthService {
           return prepared;
         }
 
-        payload['leaf_scans'] = await prepareScans(leafScans);
-        payload['pest_scans'] = await prepareScans(pestScans);
+        payload['leaf_scans'] = await prepareScans(unsyncedLeafScans);
+        payload['pest_scans'] = await prepareScans(unsyncedPestScans);
+      } else {
+        // Prepare them globally if we can look up user phones
+        Future<List<Map<String, dynamic>>> prepareGlobalScans(List<Map<String, dynamic>> localScans) async {
+          List<Map<String, dynamic>> prepared = [];
+          for (var scan in localScans) {
+            String? base64Image;
+            if (scan['imagePath'] != 'placeholder') {
+              try {
+                final file = File(scan['imagePath']);
+                if (await file.exists()) {
+                  final bytes = await file.readAsBytes();
+                  base64Image = base64Encode(bytes);
+                }
+              } catch (e) {
+                print("AuthService: Could not read image for scan");
+              }
+            }
+            final user = await db.getUserById(scan['user_id']);
+            if (user != null) {
+              prepared.add({
+                ...scan,
+                'user_phone': user['phone'],
+                'imageBase64': base64Image,
+              });
+            }
+          }
+          return prepared;
+        }
+        payload['leaf_scans'] = await prepareGlobalScans(unsyncedLeafScans);
+        payload['pest_scans'] = await prepareGlobalScans(unsyncedPestScans);
       }
 
       // 4. Get unsynced soil scans
@@ -397,6 +429,12 @@ class AuthService {
         // Mark as synced locally
         for (var u in unsyncedUsersList) {
           await db.markUserSynced(u['id']);
+        }
+        for (var s in unsyncedLeafScans) {
+          await db.markScanSynced(s['id']);
+        }
+        for (var s in unsyncedPestScans) {
+          await db.markPestScanSynced(s['id']);
         }
         for (var s in unsyncedSoilScans) {
           await db.markSoilScanSynced(s['id']);

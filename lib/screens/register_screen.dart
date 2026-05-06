@@ -129,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Name
                 TextFormField(
                   controller: _nameController,
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Full Name'.tr(context),
                     prefixIcon: const Icon(Icons.person_outline, color: _lime),
@@ -142,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   maxLength: 10,
                   decoration: InputDecoration(
                     labelText: 'Phone Number'.tr(context),
@@ -162,7 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedDistrict,
                   dropdownColor: _moss,
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'District'.tr(context),
                     prefixIcon: const Icon(Icons.map_outlined, color: _lime),
@@ -176,7 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _farmSizeController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Farm Size (Acres)'.tr(context),
                     prefixIcon: const Icon(Icons.landscape_outlined, color: _lime),
@@ -202,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _employeeCodeController,
-                    style: const TextStyle(color: _cream),
+                    style: const TextStyle(color: Colors.black),
                     decoration: InputDecoration(
                       labelText: 'Employee Code'.tr(context),
                       prefixIcon: const Icon(Icons.badge_outlined, color: _lime),
@@ -222,7 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _pinController,
                   keyboardType: TextInputType.number,
                   obscureText: _obscurePin,
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   maxLength: 6,
                   decoration: InputDecoration(
                     labelText: 'PIN (4-6 digits)'.tr(context),
@@ -247,7 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _confirmPinController,
                   keyboardType: TextInputType.number,
                   obscureText: _obscureConfirmPin,
-                  style: const TextStyle(color: _cream),
+                  style: const TextStyle(color: Colors.black),
                   maxLength: 6,
                   decoration: InputDecoration(
                     labelText: 'Confirm PIN'.tr(context),

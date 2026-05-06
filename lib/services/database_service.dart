@@ -14,7 +14,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE users (
@@ -34,7 +34,8 @@ class DatabaseService {
             user_id   INTEGER NOT NULL,
             imagePath TEXT    NOT NULL,
             diseaseName TEXT  NOT NULL,
-            timestamp INTEGER NOT NULL
+            timestamp INTEGER NOT NULL,
+            synced    INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -43,7 +44,8 @@ class DatabaseService {
             user_id   INTEGER NOT NULL,
             imagePath TEXT    NOT NULL,
             pestName  TEXT    NOT NULL,
-            timestamp INTEGER NOT NULL
+            timestamp INTEGER NOT NULL,
+            synced    INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -138,6 +140,10 @@ class DatabaseService {
             )
           ''');
         }
+        if (oldVersion < 7) {
+          await db.execute("ALTER TABLE scans ADD COLUMN synced INTEGER NOT NULL DEFAULT 0");
+          await db.execute("ALTER TABLE pest_scans ADD COLUMN synced INTEGER NOT NULL DEFAULT 0");
+        }
       },
     );
   }
@@ -183,6 +189,7 @@ class DatabaseService {
         'imagePath': imagePath,
         'diseaseName': diseaseName,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'synced': 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -196,6 +203,14 @@ class DatabaseService {
       orderBy: 'timestamp DESC',
       limit: limit,
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedScans() async {
+    return await _database.query('scans', where: 'synced = 0');
+  }
+
+  Future<void> markScanSynced(int id) async {
+    await _database.update('scans', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deleteScan(int id) async {
@@ -212,6 +227,7 @@ class DatabaseService {
         'imagePath': imagePath,
         'pestName': pestName,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'synced': 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -225,6 +241,14 @@ class DatabaseService {
       orderBy: 'timestamp DESC',
       limit: limit,
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedPestScans() async {
+    return await _database.query('pest_scans', where: 'synced = 0');
+  }
+
+  Future<void> markPestScanSynced(int id) async {
+    await _database.update('pest_scans', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deletePestScan(int id) async {

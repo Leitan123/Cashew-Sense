@@ -651,11 +651,11 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   }
 
   // ── Image picker ──────────────────────────────────────────────────────────
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     // Block while classifying
     if (_appState == _AppState.classifying) return;
 
-    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? picked = await _picker.pickImage(source: source);
     if (picked == null || !mounted) return;
 
     // Just store the image — DO NOT run classify
@@ -664,6 +664,47 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
       _appState      = _AppState.idle;   // reset to idle, clear old results
       _clearResults();
     });
+  }
+
+  void _showPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext bc) {
+        return Container(
+          decoration: BoxDecoration(
+            color: _charcoal,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            border: Border.all(color: _lime.withOpacity(0.18)),
+          ),
+          child: SafeArea(
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: _lime),
+                  title: Text('Gallery'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera, color: _lime),
+                  title: Text('Camera'.tr(context), style: TextStyle(color: _cream)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // ── Only called when button is EXPLICITLY pressed ─────────────────────────
@@ -965,7 +1006,7 @@ class _NutClassificationScreenState extends State<NutClassificationScreen> {
   );
 
   Widget _buildImagePicker() => GestureDetector(
-    onTap: _pickImage,    // ONLY picks image — never classifies
+    onTap: _showPicker,    // ONLY picks image — never classifies
     child: Container(
       height: 260,
       decoration: BoxDecoration(

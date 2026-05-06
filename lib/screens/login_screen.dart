@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    style: TextStyle(color: c.cream),
+                    style: const TextStyle(color: Colors.black),
                     maxLength: 10,
                     decoration: InputDecoration(
                       labelText: 'Phone Number'.tr(context),
@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _pinController,
                     keyboardType: TextInputType.number,
                     obscureText: _obscurePin,
-                    style: TextStyle(color: c.cream),
+                    style: const TextStyle(color: Colors.black),
                     maxLength: 6,
                     decoration: InputDecoration(
                       labelText: 'PIN'.tr(context),

@@ -545,7 +545,7 @@ class YoloService {
   }
 
   // ── predict ────────────────────────────────────────────────────────────────
-  Future<List<NutDetection>> predict(File imageFile) async {
+  Future<List<NutDetection>> predict(File imageFile, {double confThreshold = 0.10}) async {
     if (!_isLoaded) throw Exception("YOLO model not loaded");
 
     final inputShape = _interpreter.getInputTensor(0).shape;
@@ -665,7 +665,7 @@ class YoloService {
         if (row[i] > maxProb) { maxProb = row[i]; maxIdx = i - 4; }
       }
       if (maxProb > dbgMaxConf) dbgMaxConf = maxProb;
-      if (maxProb < 0.10) continue;
+      if (maxProb < confThreshold) continue;
 
       // Mask coefficients follow the class scores
       List<double>? coeffs;
